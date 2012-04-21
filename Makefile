@@ -8,7 +8,7 @@ mandir ?= /usr/share/man
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $<
 
 all: main.o colors.o sort.o drawatoms.o readinput.o init.o rotate.o setup.o Makefile
-	$(CC) $(CFLAGS) -o gdpc main.o colors.o drawatoms.o init.o sort.o rotate.o setup.o readinput.o $(LIBS)
+	$(CC) $(CFLAGS) -o gdpc2 main.o colors.o drawatoms.o init.o sort.o rotate.o setup.o readinput.o $(LIBS)
 
 main.o: main.c parameters.h
 
@@ -27,10 +27,10 @@ rotate.o: rotate.c parameters.h
 setup.o: setup.c parameters.h tooltips.h
 
 clean:
-	rm *.o gdpc
+	rm *.o gdpc2
 
 install:
-	install -p -m 755 -D gdpc $(bindir)/gdpc
+	install -p -m 755 -D gdpc2 $(bindir)/gdpc2
 
 uninstall:
-	rm $(bindir)/gdpc
+	rm $(bindir)/gdpc2
