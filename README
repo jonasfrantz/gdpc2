@@ -1,0 +1,155 @@
+gdpc - a program for visualising molecular dynamic simulations  
+Copyright (C) 1999 Jonas Frantz   
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+My email : jonas.frantz@helsinki.fi
+
+
+  GDPC Documentation
+  ------------------
+
+  Contents
+  1.	Background
+  2.	Usage
+  3.	Input file formats
+  4.	Source files and compiling
+  5.	Reporting bugs, suggesting features and known bugs
+  6.	Disclaimer
+  7.	About the author
+
+
+  1.	Background
+
+    gdpc was written as a replacement for dpc, a visualising tool for molecular
+  dynamics. dpc was written in the beginning of the nineties by Kai Nordlund
+  and had various problems with event handling. Kai asked me to take a look at
+  it, and fix it if I could. After writing the original sourcecode, Kai had 
+  added many different features, leaving the code as a total mess. I had no
+  chance of making out what was wrong with it, so I decided to try to write it 
+  from scratch using GTK+.
+
+    After some weeks of coding I had a usable version of it, which I asked some 
+  of my co-workers to try out. They gave me suggestions for new features and
+  reported bugs, after some more weeks of coding I implemented the graphical
+  setupwindow so new users could learn to use it more easily.
+  After major code cleanup in version 1.20, I decided that gdpc was stable and 
+  bugfree enough that it could be released to the public.
+
+
+  2.	Usage
+
+    gdpc is mainly and most easily used from the graphical initialization
+  window but for faster usage I recommend the command prompt. Using gdpc:s
+  setupwindow is almost selfexplanatory, if you cant figure out what an option
+  does test it. From the command prompt the only necessary options to run gdpc 
+  are the column representations and the input file.
+  The column representations describe from what column gdpc tries to read
+  certain data, the first column respresents x, the second y, the third z and 
+  the fourth t. If the input file s in xyz format the t column will be skipt 
+  and the time will be read from the input datas headers.
+
+    The usage of the program is pretty easy to learn and by doing some testing 
+  with it you should learn to master it.
+  To demonstrate gdpc I have included som example input files liquid.out and
+  md.movie, the first being in general file format and the other in xyz file
+  format.
+
+  They can best be tested with the commands:
+  gdpc cube 30 m 2 d 20 erase 1 2 3 4 liquid.test
+  gdpc m 2 d 10 erase xyz 2 3 4 5 md.test
+  gdpc m 2 d 10 erase usetypes xyz 2 3 4 5 manytypes.test
+
+
+  3.	Input file formats
+
+    The general file format consists of at least four coulmns of data, x,y,z and t.
+  gdpc will read data to each frame as long as the t column data stays the same,
+  after that it will plot the frame and start reading the next frames data.
+
+    The xyz file format consists of several frames with their own headers. 
+  The header consists of two lines, the first consists of only one number the
+  number of atoms. The second line is a comment line and it is from this line 
+  that gdpc searches for the time, actually it searches for the string "fs" and
+  when found it, takes the number before this string.
+  Then follows as many lines of atom data as was declared on the first row of 
+  the header. After reading the data it expects another header directly after the
+  atomdata has ended.
+
+
+  4.	Source files and compiling
+
+  main.c	The programs main code can be found in this file. The confi-
+		guration of the window and calling other important functions
+		is handled here.
+  drawatoms.c	This file contains functions relevant to the drawing of the
+		atoms to the pixmap and the rotating of the coordinates.
+  readinput.c	This file contains the functions which handles reading the 
+		data from the inputfile.
+  rotate.c	This files contain functions that handle the buttons of the
+		rotations.
+  sort.c	This file contains a function for sorting the coordinates.
+  colors.c	In this file the settings of the colorschemes are made.
+  setup.c	This file contains the functions for the graphical initialization 
+		and setup window and everything related to it.
+  parameters.h	This file contains default parameters for most options, the
+		version number and some basic structures.
+
+  To compile gdpc you have to have gtk+ 1.2 and Imlib installed on your system.
+  You can get gtk+ from http://www.gtk.org and you'll find Imlib on 
+  http://www.labs.redhat.com/imlib. gdpc has to this moment been compiled on 
+  Redhat 6.0 both i386 and alpha architectures, but I can't see why it 
+  wouldn't be compilable in another environment as long as you have gtk+ and 
+  Imlib properly installed.
+
+
+
+  5.	Repoting bugs, suggesting features and known bugs
+
+    Bugs can be reported to jonas.frantz@helsinki.fi or to knordlun@beam.helsinki.fi.
+  Please include the input files you were running, the exact parameters used
+  when the bug occured and a reproducable description of what you're doing when
+  the bug occures.
+
+    New features can be reported to jonas.frantz@helsinki.fi, dont expect them to 
+  get implemented at the moment of the arrival of the mail, because I got other
+  things to do as well.
+
+    No known bugs at this moment (V 1.28)
+
+
+  6.	Disclaimer
+
+  I can not be held responsible if this program fucks up your computer. gdpc comes
+  with no warranty.
+
+
+  7.	About the author
+
+    My name is Jonas Frantz, when I'm not working as a research associate at the
+  Helsinki University accelerator lab I'm studying physics. I'm beginning my third
+  year of studies this fall and I expect to finish them in about 1-2 years.
+
+    My summerjob at the acceleratorlab contains of simulating SiGe interface recoils,
+  if you don't know anything about materialphysics, I can tell you that it 
+  practically about giving a kinetic energy to one atom in the SiGe interface and
+  to watch what happends (mostly atomic movement over the interface(mixing)).
+
+    Update Summer 2000 : This summer I'm simulation bond breaking in Si, primarily 
+  electronic sputtering of Si surfaces and recristallisation of amorphous areas in
+  a-Si.
+
+    gdpc is a very useful tool in visualising what happends in the simulation and 
+  creating demonstrative pictures from them and I have had lots of help from it.
