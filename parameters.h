@@ -116,10 +116,12 @@ struct xyzstruc {
  	double zmin; 				/* Minimum z coordinate of frame */
  	double zmax; 				/* Maximum z coordinate of frame */
  	GMutex *frameready; 		/* Control variables for 'Is the whole frame read?' */
- 	GMutex *framedrawn; 		/* Control variables for 'Is the whole frame drawn?' */
+ 	GMutex *framecomplete; 		/* Control variables for 'Has the frame been completely handled?' */
+ 	GMutex *framedrawn; 		/* Control variables for 'Is the frame currently being drawn?' */
  	gint numAtoms; 				/* Number of atoms in frame */
  	struct xyzstruc *atomdata;	/* Data of frame */
  	double atime; 				/* Timestamp of frame */
+ 	gboolean lastFrame;
  };
 
 
@@ -167,8 +169,6 @@ struct GlobalParams {
 	double zc; /* Angular correction, z-wise */
 	gboolean mbsleep; /* Do we want to wait after every frame for a middle button press ? */
 	gboolean pausecheck; /* Is animation on pause ? */
-	gboolean drawcheck; /* Are we drawing a frame now ? */
-	gboolean rotated; /* Is the box rotated from last frame ? */
 	gboolean setupstop; /* Is the animation being configured ? */
 	gboolean whitebg; /* Do we want a white background ? */
 	gboolean erase; /* Do we want to erase the old frame before drawing a new one ? */
@@ -177,7 +177,6 @@ struct GlobalParams {
 	gboolean dumpnum; /* Do we want number-of-frame or timestamp on dumped images ? */
 	gboolean tifjpg; /* Do we want tifs or jpgs to be dumped ? */
 	gboolean StartedAlready; /* Is the animation started ? */
-	gboolean redrawcheck; /* Is the pixmap being redrawn ? */
 	gboolean usetypes; /* Will we be coloring according to atomtypes ? */
 	gboolean once;
 	gchar fstring[30]; /* String to check for in inputlines */
@@ -195,7 +194,7 @@ struct DrawStruct {
 	cairo_t *cr;
 	gint crXSize, crYSize;
 	struct GlobalParams *params;
-	gint NumFrame;
+	gint nextFrameNum;
 	struct FrameData *currentFrame;
 };
 
@@ -234,7 +233,7 @@ void sortatoms(struct xyzstruc *coords, gint left, gint right, gboolean sort);
 void drawrotate(GtkWidget *widget, struct GlobalParams *params);
 void resetic();
 
-gint drawnext(struct GlobalParams *params);
+gint switchToNextFrame(struct GlobalParams *params);
 
 //gint allocatecolors(GdkColor **colors, gint colorset, gint mode);
 void setColorset(struct GlobalParams *params, gint colorsetnum);

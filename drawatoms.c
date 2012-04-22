@@ -57,6 +57,7 @@ void drawcircles(cairo_t *cr, double xmin, double xmax, double ymin,
 	gint x, y, c, i, rtmp;
 	cairo_pattern_t *pat;
 
+	radius /= 2;
 	for (i = 0; i < numatoms; i++) {
 		x = transf_abs(coords[i].xcoord, xmin, xmax, absxsize);
 		y = transf_abs(coords[i].ycoord, ymin, ymax, absysize);
@@ -121,7 +122,7 @@ void drawcircles(cairo_t *cr, double xmin, double xmax, double ymin,
 /* calls the drawcircles to draw them.					*/
 /************************************************************************/
 void rotateatoms(struct DrawStruct DrawData) {
-	gint i, j, numframe, numatoms;
+	gint i, j, numatoms;
 
 	double isin, icos, jsin, jcos, ksin, kcos;
 	double maxx, minx, maxy, miny, maxz, minz;
@@ -134,16 +135,9 @@ void rotateatoms(struct DrawStruct DrawData) {
 	struct GlobalParams *params;
 
 	params = DrawData.params;
-	numframe = DrawData.NumFrame;
 
-	coords = params->framedata[numframe].atomdata;
-	numatoms = params->framedata[numframe].numAtoms;
-
-	printf("%d\n", DrawData.currentFrame);
-
-	if (&(params->framedata[numframe]) != DrawData.currentFrame) {
-		printf("Not pointing right\n");
-	}
+	coords = (DrawData.currentFrame)->atomdata;
+	numatoms = (DrawData.currentFrame)->numAtoms;
 
 	minx = 0.0;
 	maxx = 0.0;
@@ -291,34 +285,34 @@ void rotateatoms(struct DrawStruct DrawData) {
 	}
 
 	if (params->xmin == 65535.0) {
-		params->framedata[numframe].xmax = maxx;
-		params->framedata[numframe].xmin = minx;
+		(DrawData.currentFrame)->xmax = maxx;
+		(DrawData.currentFrame)->xmin = minx;
 	} else {
-		params->framedata[numframe].xmax = params->xmax;
-		params->framedata[numframe].xmin = params->xmin;
+		(DrawData.currentFrame)->xmax = params->xmax;
+		(DrawData.currentFrame)->xmin = params->xmin;
 	}
 	if (params->ymin == 65535.0) {
-		params->framedata[numframe].ymax = maxy;
-		params->framedata[numframe].ymin = miny;
+		(DrawData.currentFrame)->ymax = maxy;
+		(DrawData.currentFrame)->ymin = miny;
 	} else {
-		params->framedata[numframe].ymax = params->ymax;
-		params->framedata[numframe].ymin = params->ymin;
+		(DrawData.currentFrame)->ymax = params->ymax;
+		(DrawData.currentFrame)->ymin = params->ymin;
 	}
 	if (params->zmin == 65535.0) {
-		params->framedata[numframe].zmax = maxz;
-		params->framedata[numframe].zmin = minz;
+		(DrawData.currentFrame)->zmax = maxz;
+		(DrawData.currentFrame)->zmin = minz;
 	} else {
-		params->framedata[numframe].zmax = params->zmax;
-		params->framedata[numframe].zmin = params->zmin;
+		(DrawData.currentFrame)->zmax = params->zmax;
+		(DrawData.currentFrame)->zmin = params->zmin;
 	}
 
-	drawcircles(DrawData.cr, params->framedata[numframe].xmin, params->framedata[numframe].xmax,
-			params->framedata[numframe].ymin, params->framedata[numframe].ymax,
-			params->framedata[numframe].zmin, params->framedata[numframe].zmax, params->absxsize,
+	drawcircles(DrawData.cr, (DrawData.currentFrame)->xmin, (DrawData.currentFrame)->xmax,
+			(DrawData.currentFrame)->ymin, (DrawData.currentFrame)->ymax,
+			(DrawData.currentFrame)->zmin, (DrawData.currentFrame)->zmax, params->absxsize,
 			params->absysize, params->mode, params->radius, params->vary,
 			newcoords, params->usetypes, params->numtypes, numatoms, params);
 
-	FrameTime = params->framedata[numframe].atime;
+	FrameTime = (DrawData.currentFrame)->atime;
 	g_free(newcoords);
 }
 

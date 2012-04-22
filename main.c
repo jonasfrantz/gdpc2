@@ -55,8 +55,6 @@ extern double FrameTime; /* Contains time of frame just shown */
 extern FILE *NewFP; /* Filepointer to new file if one has
  been chosen, otherwise = NULL */
 
-extern gint lastframedone; /* Have we shown the last frame ? */
-
 /************************************************************************/
 /* This function is called when the quit button is pressed.		*/
 /************************************************************************/
@@ -84,13 +82,15 @@ void pauseb(GtkToggleButton *widget, struct GlobalParams *params) {
 void restart(GtkWidget *widget, struct GlobalParams *params) {
 	gint i;
 
-#if Debug 
+#if Debug
 	printf("Restarting animation.\n");
 	printf("Clearing framedrawn semaphores.\n");
 #endif
 
 	for (i = NUMFRAMES - 1; i >= 0; i--) {
-		g_mutex_trylock(params->framedata[i].framedrawn);
+		g_mutex_trylock(params->framedata[i].framecomplete);
+		g_mutex_lock(params->framedata[i].framedrawn);
+		params->framedata[i].lastFrame = FALSE;
 	}
 
 #if Debug
@@ -117,11 +117,14 @@ void restart(GtkWidget *widget, struct GlobalParams *params) {
 		g_mutex_trylock(params->framedata[i].frameready);
 	}
 
-	DrawData.NumFrame = NumFrameRI;
+	DrawData.nextFrameNum = NumFrameRI;
 
 	for (i = 0; i < NUMFRAMES; i++) {
+		g_mutex_unlock(params->framedata[i].framecomplete);
 		g_mutex_unlock(params->framedata[i].framedrawn);
 	}
+
+	DrawData.currentFrame = NULL;
 }
 
 /************************************************************************/
@@ -150,28 +153,57 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 	guint width, height;
 	cairo_t *first_cr;
 	cairo_surface_t *first;
+	char tstr[64];
 
 	width = gtk_widget_get_allocated_width(widget);
 	height = gtk_widget_get_allocated_height(widget);
 
-	first = cairo_surface_create_similar(cairo_get_target(cr),
-			CAIRO_CONTENT_COLOR, width, height);
+//	printf("Call update image (%d)\n", DrawData.currentFrame);
 
-	first_cr = cairo_create(first);
+	if (DrawData.currentFrame != NULL) {
+		if (g_mutex_trylock((DrawData.currentFrame)->framedrawn) == TRUE) {
+			first = cairo_surface_create_similar(cairo_get_target(cr),
+					CAIRO_CONTENT_COLOR, width, height);
 
-	DrawData.cr = first_cr;
-	DrawData.crXSize = width;
-	DrawData.crYSize = height;
+			first_cr = cairo_create(first);
 
-	cleardrawable(DrawData);
-	rotateatoms(DrawData);
+			DrawData.cr = first_cr;
+			DrawData.crXSize = width;
+			DrawData.crYSize = height;
 
-	cairo_set_source_surface(cr, first, 0, 0);
-	cairo_paint(cr);
+			cleardrawable(DrawData);
+			rotateatoms(DrawData);
 
-	cairo_surface_destroy(first);
+			cairo_set_source_surface(cr, first, 0, 0);
+			cairo_paint(cr);
 
-	cairo_destroy(first_cr);
+			cairo_surface_destroy(first);
+
+			cairo_destroy(first_cr);
+
+			sprintf(tstr, "X: %4.3f - %4.3f",
+					(DrawData.currentFrame)->xmin,
+					(DrawData.currentFrame)->xmax);
+			gtk_entry_set_text((GtkEntry *) maxx_entry, tstr);
+			sprintf(tstr, "Y: %4.3f - %4.3f",
+					(DrawData.currentFrame)->ymin,
+					(DrawData.currentFrame)->ymax);
+			gtk_entry_set_text((GtkEntry *) maxy_entry, tstr);
+			sprintf(tstr, "Z: %4.3f - %4.3f",
+					(DrawData.currentFrame)->zmin,
+					(DrawData.currentFrame)->zmax);
+			gtk_entry_set_text((GtkEntry *) maxz_entry, tstr);
+
+			sprintf(tstr, "Time: %5.3f fs", (DrawData.currentFrame)->atime);
+			gtk_entry_set_text((GtkEntry *) time_entry, tstr);
+
+/*			if ((DrawData.currentFrame)->lastFrame) {
+				printf("Current frame is last one at %5.3f (%d)\n", (DrawData.currentFrame)->atime, DrawData.currentFrame);
+			}
+*/
+			g_mutex_unlock((DrawData.currentFrame)->framedrawn);
+		}
+	}
 
 	return TRUE;
 }
@@ -278,7 +310,7 @@ gint motion_notify_event(GtkWidget *widget, GdkEventMotion *event,
 		}
 	}
 
-	NumFrame = DrawData.NumFrame;
+	NumFrame = DrawData.nextFrameNum;
 	NumFrame--;
 	if (NumFrame < 0)
 		NumFrame += NUMFRAMES;
@@ -313,8 +345,6 @@ void SetupStartOk(struct GlobalParams *params) {
 			|| params->absysize != params->oldysize) {
 		gtk_widget_set_size_request(params->drawing_area,
 				params->absxsize + 2 * xborder, params->absysize + 2 * yborder);
-
-		params->redrawcheck = TRUE;
 	}
 
 	setColorset(params, params->colorset);
@@ -339,7 +369,6 @@ void SetupStartOk(struct GlobalParams *params) {
 		cleardrawable(DrawData);
 	} else {
 		rotateatoms(DrawData);
-		params->rotated = TRUE;
 	}
 	params->setupstop = FALSE;
 }
@@ -357,14 +386,9 @@ void SetupStartCancel(struct GlobalParams *params) {
 /* pressing a button.													*/
 /************************************************************************/
 void drawrotate(GtkWidget *widget, struct GlobalParams *params) {
-#if Debug
 	printf("Drawing rotated scene.\n");
-#endif
 
-	DrawData.NumFrame--;
 	gtk_widget_queue_draw(params->drawing_area);
-	DrawData.NumFrame++;
-	params->rotated = TRUE;
 }
 
 /************************************************************************/
@@ -374,7 +398,7 @@ void drawrotate(GtkWidget *widget, struct GlobalParams *params) {
 /* the next frame. When drawatoms is done, if updates the time in the	*/
 /* timeentry and puts the pixmap onto the screen.			*/
 /************************************************************************/
-gboolean drawnext(struct GlobalParams *params) {
+gboolean switchToNextFrame(struct GlobalParams *params) {
 	char tstr[64];
 	char picname[128];
 	char pictype[16];
@@ -382,14 +406,10 @@ gboolean drawnext(struct GlobalParams *params) {
 	struct timezone tz;
 	static long previous_usec = 0;
 	static long previous_sec = 0;
-
-#if Debug
-	printf("Idle callback called.\n");
-#endif
+	gboolean previousDrawn;
+	struct FrameData *previousFrame;
 
 	gettimeofday(&tv, &tz);
-
-//printf("%f\n",((double)tv.tv_sec-previous_sec)*1000 + ((double) tv.tv_usec-previous_usec)/1000);
 
 	if ((((double) tv.tv_sec - previous_sec) * 1000
 			+ ((double) tv.tv_usec - previous_usec) / 1000)
@@ -397,44 +417,45 @@ gboolean drawnext(struct GlobalParams *params) {
 		previous_usec = tv.tv_usec;
 		previous_sec = tv.tv_sec;
 
-		if (params->drawcheck && !params->pausecheck && !params->setupstop
+		if (!params->pausecheck && !params->setupstop
 				&& (!params->mbsleep || MB_pressed)) {
-			params->drawcheck = FALSE;
 			MB_pressed = FALSE;
-			if (g_mutex_trylock(params->framedata[DrawData.NumFrame].frameready)
-					== TRUE) {
 
-#if Debug
-				printf("Calling drawing function.\n");
-#endif
+			previousDrawn = FALSE;
+			if (DrawData.currentFrame != NULL) {
+				if (!(DrawData.currentFrame)->lastFrame) {
+					if (g_mutex_trylock((DrawData.currentFrame)->framedrawn)
+							== TRUE) {
+						previousDrawn = TRUE;
+					}
+				}
+			} else {
+				previousDrawn = TRUE;
 
+			}
+
+			if (g_mutex_trylock(params->framedata[DrawData.nextFrameNum].frameready)
+					== TRUE && previousDrawn) {
+
+				previousFrame = DrawData.currentFrame;
+				DrawData.currentFrame = &(params->framedata[DrawData.nextFrameNum]);
+/*				if (DrawData.currentFrame != NULL) {
+					if ((DrawData.currentFrame)->lastFrame) {
+						printf("Current frame is last one\n");
+					}
+				}
+*/
 				gtk_widget_queue_draw(params->drawing_area);
 
-				params->redrawcheck = TRUE;
+				if (previousFrame != NULL) {
+					g_mutex_unlock(previousFrame->framedrawn);
+					g_mutex_unlock(previousFrame->framecomplete);
+				}
 
-#if Debug
-				printf("Done drawing.\n");
-#endif
-
-#if Debug
-				printf("Setting entryboxes.\n");
-#endif
-
-				sprintf(tstr, "X: %4.3f - %4.3f",
-						params->framedata[DrawData.NumFrame].xmin,
-						params->framedata[DrawData.NumFrame].xmax);
-				gtk_entry_set_text((GtkEntry *) maxx_entry, tstr);
-				sprintf(tstr, "Y: %4.3f - %4.3f",
-						params->framedata[DrawData.NumFrame].ymin,
-						params->framedata[DrawData.NumFrame].ymax);
-				gtk_entry_set_text((GtkEntry *) maxy_entry, tstr);
-				sprintf(tstr, "Z: %4.3f - %4.3f",
-						params->framedata[DrawData.NumFrame].zmin,
-						params->framedata[DrawData.NumFrame].zmax);
-				gtk_entry_set_text((GtkEntry *) maxz_entry, tstr);
-
-				sprintf(tstr, "Time: %5.3f fs", FrameTime);
-				gtk_entry_set_text((GtkEntry *) time_entry, tstr);
+				DrawData.nextFrameNum++;
+				if (DrawData.nextFrameNum == NUMFRAMES) {
+					DrawData.nextFrameNum = 0;
+				}
 
 #if Debug
 				printf("%s\n",params->dumpname);
@@ -469,15 +490,7 @@ gboolean drawnext(struct GlobalParams *params) {
 					}
 				}
 				params->numframe++;
-
-				g_mutex_unlock(params->framedata[DrawData.NumFrame].framedrawn);
-				DrawData.NumFrame++;
-				DrawData.currentFrame = &(params->framedata[DrawData.NumFrame]);
-				if (DrawData.NumFrame == NUMFRAMES)
-					DrawData.NumFrame = 0;
-				params->drawcheck = TRUE;
-			} else
-				params->drawcheck = TRUE;
+			}
 		}
 	}
 
@@ -485,12 +498,6 @@ gboolean drawnext(struct GlobalParams *params) {
 	printf("Done with drawing part of timeoutcallback.\n");
 #endif
 
-	if (params->rotated) {
-#if Debug
-		printf("Writing out rotated frame pixmap to window.\n");
-#endif
-		params->rotated = FALSE;
-	}
 
 #if Debug
 	printf("Setting angle entryboxes.\n");
@@ -503,8 +510,13 @@ gboolean drawnext(struct GlobalParams *params) {
 	sprintf(tstr, "Z angle: %f", params->zc);
 	gtk_entry_set_text((GtkEntry *) zc_entry, tstr);
 
-	if (params->once && lastframedone)
-		gtk_main_quit();
+	if (params->once) {
+/*		if (g_mutex_trylock(params->atEnd) == TRUE) {
+			g_mutex_unlock(params->atEnd);
+		} else {
+			gtk_main_quit();
+		} */
+	}
 
 	return TRUE;
 }
@@ -519,7 +531,6 @@ void SetupRedraw(struct GlobalParams *params) {
 		gtk_widget_set_size_request(params->drawing_area,
 				params->absxsize + 2 * xborder, params->absysize + 2 * yborder);
 
-		params->redrawcheck = TRUE;
 		cleardrawable(DrawData);
 	}
 
@@ -528,7 +539,6 @@ void SetupRedraw(struct GlobalParams *params) {
 	setColorset(params, params->colorset);
 
 	rotateatoms(DrawData);
-	params->rotated = TRUE;
 	params->oldxc = params->xcolumn;
 	params->oldyc = params->ycolumn;
 	params->oldzc = params->zcolumn;
@@ -766,12 +776,14 @@ void StartEverything(struct GlobalParams *params) {
 	for (i = 0; i < NUMFRAMES; i++) {
 		params->framedata[i].frameready = g_mutex_new();
 		g_mutex_lock(params->framedata[i].frameready);
+		params->framedata[i].framecomplete = g_mutex_new();
+		g_mutex_unlock(params->framedata[i].framecomplete);
 		params->framedata[i].framedrawn = g_mutex_new();
 		g_mutex_unlock(params->framedata[i].framedrawn);
 		params->framedata[i].atomdata = NULL;
 	}
-	DrawData.NumFrame = 0;
-	DrawData.currentFrame = &(params->framedata[0]);
+	DrawData.nextFrameNum = 0;
+	DrawData.currentFrame = NULL;
 
 #if Debug 
 	printf("Initialising filewait/EOF semaphores.\n");
@@ -797,7 +809,7 @@ void StartEverything(struct GlobalParams *params) {
 #endif
 
 	/* Setup timeout. */
-	g_idle_add((GSourceFunc) drawnext, params);
+	g_idle_add((GSourceFunc) switchToNextFrame, params);
 }
 
 /************************************************************************/
@@ -821,15 +833,12 @@ int main(int argc, char **argv) {
 	params.jmangle = 0.0;
 	params.numframe = 1;
 	params.pausecheck = FALSE;
-	params.drawcheck = TRUE;
-	params.rotated = FALSE;
 	params.setupstop = FALSE;
 	params.pressed = FALSE;
 	params.StartedAlready = FALSE;
-	params.redrawcheck = FALSE;
 	params.usetypes = FALSE;
 
-	DrawData.NumFrame = 0;
+	DrawData.nextFrameNum = 0;
 	DrawData.params = &params;
 
 #if Debug 
@@ -873,7 +882,6 @@ int main(int argc, char **argv) {
 	params.whitebg = WHITEBG;
 	params.erase = ERASE;
 	params.fxyz = FXYZ;
-	params.drawcheck = TRUE;
 	params.mbsleep = FALSE;
 	params.once = FALSE;
 

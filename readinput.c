@@ -35,7 +35,7 @@ gint lastframedone = 0;
 
 /************************************************************************/
 /* Reads the input file and processes it, then it calls rotateatoms to	*/
-/* rotate the coordinates and draw them.				*/
+/* rotate the coordinates and draw them.								*/
 /************************************************************************/
 void * readinput(struct GlobalParams *params) {
 	gchar buf[160];
@@ -43,7 +43,7 @@ void * readinput(struct GlobalParams *params) {
 	gchar timestr[64] = "0.0\0";
 	gchar AType[MAXTYPES][5];
 
-	gint n, i, j, numtypes, nreadxyz, numalloc, numatoms;
+	gint n, i, j, numtypes, nreadxyz, numalloc, numatoms, previousFrameNum;
 
 	double maxx, maxy, maxz, minx, miny, minz;
 
@@ -62,7 +62,7 @@ void * readinput(struct GlobalParams *params) {
 
 	while (1) {
 		g_mutex_lock(params->atEnd);
-		g_mutex_lock(params->framedata[NumFrameRI].framedrawn);
+		g_mutex_lock(params->framedata[NumFrameRI].framecomplete);
 
 #if Debug
 		printf("Reading frame : %d\n",NumFrameRI);
@@ -89,6 +89,8 @@ void * readinput(struct GlobalParams *params) {
 
 		if (params->fxyz) {
 			if (fgets(buf, 160, fpRI) == NULL) {
+				params->framedata[previousFrameNum].lastFrame = TRUE;
+//				printf("RI: At end %5.3f\n", params->framedata[previousFrameNum].atime);
 				NumFrameRI++;
 				if (NumFrameRI == NUMFRAMES)
 					NumFrameRI = 0;
@@ -96,6 +98,7 @@ void * readinput(struct GlobalParams *params) {
 				continue;
 			} else
 				g_mutex_unlock(params->atEnd);
+				params->framedata[NumFrameRI].lastFrame = FALSE;
 
 			n = sscanf(buf, "%d", &nreadxyz);
 			if (n != 1) {
@@ -103,7 +106,6 @@ void * readinput(struct GlobalParams *params) {
 						"columns on first row of frame. "
 						"Make sure the input file is in xyz format.\n", buf);
 				gtk_main_quit();
-//		     gtk_exit(0);
 			}
 			if (fgets(buf, 160, fpRI) == NULL) {
 				printf("Abnormal end of input.\n");
@@ -137,7 +139,6 @@ void * readinput(struct GlobalParams *params) {
 			if (coords == NULL) {
 				printf("Out of memory!\nTry reducing number of frames used.\n");
 				gtk_main_quit();
-//		gtk_exit(0);
 			}
 			params->framedata[NumFrameRI].numAtoms = nreadxyz;
 			if (params->framedata[NumFrameRI].atomdata != NULL)
@@ -163,7 +164,6 @@ void * readinput(struct GlobalParams *params) {
 						|| n < params->zcolumn || n < params->tcolumn) {
 					printf("Error in xyz input file : %s\nExiting.\n", buf);
 					gtk_main_quit();
-//		    gtk_exit(0);
 				}
 
 				typescheck = FALSE;
@@ -180,7 +180,6 @@ void * readinput(struct GlobalParams *params) {
 					if (numtypes > MAXTYPES) {
 						printf("Maximum number of atomtypes reached!\n");
 						gtk_main_quit();
-//			gtk_exit(0);
 					}
 				} else
 					coords[numatoms].atype = j;
@@ -245,6 +244,8 @@ void * readinput(struct GlobalParams *params) {
 
 			params->numtypes = numtypes;
 			g_mutex_unlock(params->framedata[NumFrameRI].frameready);
+
+			previousFrameNum = NumFrameRI;
 			NumFrameRI++;
 			if (NumFrameRI == NUMFRAMES)
 				NumFrameRI = 0;
@@ -254,7 +255,7 @@ void * readinput(struct GlobalParams *params) {
 			}
 		}
 
-		/* If not in xyz format start redaing from here ! */
+		/* If not in xyz format start reading from here ! */
 
 		else {
 			numalloc = ALLOCTHIS;
@@ -264,7 +265,6 @@ void * readinput(struct GlobalParams *params) {
 			if (coords == NULL) {
 				printf("Out of memory!\nTry reducing number of frames used.\n");
 				gtk_main_quit();
-//		gtk_exit(0);
 			}
 			if (framecheck) {
 				coords[i].xcoord = lastframe.xcoord;
@@ -275,6 +275,7 @@ void * readinput(struct GlobalParams *params) {
 			}
 			framecheck = TRUE;
 			endframe = TRUE;
+			params->framedata[NumFrameRI].lastFrame = TRUE;
 			while (fgets(buf, 160, fpRI) != NULL) {
 				if (i + 1 == numalloc) {
 					numalloc += ALLOCTHIS;
@@ -284,7 +285,6 @@ void * readinput(struct GlobalParams *params) {
 						printf(
 								"Out of memory!\nTry reducing number of frames used.\n");
 						gtk_main_quit();
-//			gtk_exit(0);
 					}
 				}
 				n = sscanf(buf, "%s %s %s %s %s %s %s %s %s %s %s %s %s "
@@ -302,7 +302,6 @@ void * readinput(struct GlobalParams *params) {
 							"Error in input file : %s\nAre you sure the input file isn't in xyz "
 									"format ?\nExiting.\n", buf);
 					gtk_main_quit();
-//		    gtk_exit(0);
 				}
 				n = sscanf(arg[params->xcolumn - 1], "%lf", &coords[i].xcoord);
 				if (n == 0)
@@ -336,6 +335,7 @@ void * readinput(struct GlobalParams *params) {
 					i++;
 				} else {
 					endframe = FALSE;
+					params->framedata[NumFrameRI].lastFrame = FALSE;
 					break;
 				}
 			}
@@ -371,13 +371,17 @@ void * readinput(struct GlobalParams *params) {
 				g_free(params->framedata[NumFrameRI].atomdata);
 			params->framedata[NumFrameRI].atomdata = coords;
 			g_mutex_unlock(params->framedata[NumFrameRI].frameready);
-			NumFrameRI++;
-			if (NumFrameRI == NUMFRAMES)
-				NumFrameRI = 0;
+
 			if (endframe) {
 				framecheck = FALSE;
-			} else
+			} else {
 				g_mutex_unlock(params->atEnd);
+			}
+
+			NumFrameRI++;
+			if (NumFrameRI == NUMFRAMES) {
+				NumFrameRI = 0;
+			}
 		}
 	}
 }
