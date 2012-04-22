@@ -139,6 +139,12 @@ void rotateatoms(struct DrawStruct DrawData) {
 	coords = params->framedata[numframe].atomdata;
 	numatoms = params->framedata[numframe].numAtoms;
 
+	printf("%d\n", DrawData.currentFrame);
+
+	if (&(params->framedata[numframe]) != DrawData.currentFrame) {
+		printf("Not pointing right\n");
+	}
+
 	minx = 0.0;
 	maxx = 0.0;
 	miny = 0.0;

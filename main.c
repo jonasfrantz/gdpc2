@@ -143,6 +143,8 @@ void setup(GtkWidget *widget, struct GlobalParams *params) {
 	setupwindow(params);
 }
 
+/************************************************************************/
+/************************************************************************/
 gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 		struct GlobalParams *params) {
 	guint width, height;
@@ -287,12 +289,15 @@ gint motion_notify_event(GtkWidget *widget, GdkEventMotion *event,
 	sprintf(
 			xstr,
 			"X: %5.3f   Y: %5.3f",
-			(((params->framedata[NumFrame].xmax - params->framedata[NumFrame].xmin)
-					* (x - xborder) / (double) params->absxsize)
+			(((params->framedata[NumFrame].xmax
+					- params->framedata[NumFrame].xmin) * (x - xborder)
+					/ (double) params->absxsize)
 					+ params->framedata[NumFrame].xmin),
-			(((params->framedata[NumFrame].ymax - params->framedata[NumFrame].ymin)
+			(((params->framedata[NumFrame].ymax
+					- params->framedata[NumFrame].ymin)
 					* (params->absysize - (y - yborder))
-					/ (double) params->absysize)) + params->framedata[NumFrame].ymin);
+					/ (double) params->absysize))
+					+ params->framedata[NumFrame].ymin);
 	gtk_entry_set_text((GtkEntry *) coord_entry, xstr);
 
 	return TRUE;
@@ -396,7 +401,8 @@ gboolean drawnext(struct GlobalParams *params) {
 				&& (!params->mbsleep || MB_pressed)) {
 			params->drawcheck = FALSE;
 			MB_pressed = FALSE;
-			if (g_mutex_trylock(params->framedata[DrawData.NumFrame].frameready) == TRUE) {
+			if (g_mutex_trylock(params->framedata[DrawData.NumFrame].frameready)
+					== TRUE) {
 
 #if Debug
 				printf("Calling drawing function.\n");
@@ -466,6 +472,7 @@ gboolean drawnext(struct GlobalParams *params) {
 
 				g_mutex_unlock(params->framedata[DrawData.NumFrame].framedrawn);
 				DrawData.NumFrame++;
+				DrawData.currentFrame = &(params->framedata[DrawData.NumFrame]);
 				if (DrawData.NumFrame == NUMFRAMES)
 					DrawData.NumFrame = 0;
 				params->drawcheck = TRUE;
@@ -764,6 +771,7 @@ void StartEverything(struct GlobalParams *params) {
 		params->framedata[i].atomdata = NULL;
 	}
 	DrawData.NumFrame = 0;
+	DrawData.currentFrame = &(params->framedata[0]);
 
 #if Debug 
 	printf("Initialising filewait/EOF semaphores.\n");
