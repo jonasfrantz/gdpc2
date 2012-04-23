@@ -65,7 +65,7 @@ void quit(GtkWidget *widget, gpointer data) {
 /************************************************************************/
 /* This function is called when the pause button is pressed.		*/
 /************************************************************************/
-void pauseb(GtkToggleButton *widget, struct GlobalParams *params) {
+void pauseButtonPressed(GtkToggleButton *widget, struct GlobalParams *params) {
 #if Debug 
 	if (gtk_toggle_button_get_active(widget))
 	printf("Setting animation on pause.\n");
@@ -79,7 +79,7 @@ void pauseb(GtkToggleButton *widget, struct GlobalParams *params) {
 /* This function is called when the restart button is pressed.   	*/
 /* It simply resets the filepointer and clears the drawingboard. 	*/
 /************************************************************************/
-void restart(GtkWidget *widget, struct GlobalParams *params) {
+void restartAnimation(GtkWidget *widget, struct GlobalParams *params) {
 	gint i;
 
 #if Debug
@@ -131,7 +131,7 @@ void restart(GtkWidget *widget, struct GlobalParams *params) {
 /* This function is called when the setup button is pressed.		*/
 /* It stops the animation and calls the setupwindow function.		*/
 /************************************************************************/
-void setup(GtkWidget *widget, struct GlobalParams *params) {
+void setupButtonPressed(GtkWidget *widget, struct GlobalParams *params) {
 #if Debug
 	printf("Starting setup window.\n");
 #endif
@@ -157,8 +157,6 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 
 	width = gtk_widget_get_allocated_width(widget);
 	height = gtk_widget_get_allocated_height(widget);
-
-//	printf("Call update image (%d)\n", DrawData.currentFrame);
 
 	if (DrawData.currentFrame != NULL) {
 		if (g_mutex_trylock((DrawData.currentFrame)->framedrawn) == TRUE) {
@@ -197,10 +195,6 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 			sprintf(tstr, "Time: %5.3f fs", (DrawData.currentFrame)->atime);
 			gtk_entry_set_text((GtkEntry *) time_entry, tstr);
 
-/*			if ((DrawData.currentFrame)->lastFrame) {
-				printf("Current frame is last one at %5.3f (%d)\n", (DrawData.currentFrame)->atime, DrawData.currentFrame);
-			}
-*/
 			g_mutex_unlock((DrawData.currentFrame)->framedrawn);
 		}
 	}
@@ -212,7 +206,7 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 /* This procedure is called when keyboard key is pressed.		*/
 /* Escape key quits gdpc, space is used with the bsleep option.		*/
 /************************************************************************/
-gboolean key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer data) {
+gboolean keyPressEvent(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 	switch (event->keyval) {
 	case GDK_KEY_Escape:
 		gtk_main_quit();
@@ -236,7 +230,7 @@ gboolean key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 /* with dpc. When the left button is pressed this procedure saves the	*/
 /* position of the cursor.						*/
 /************************************************************************/
-gint button_press_event(GtkWidget *widget, GdkEventButton *event,
+gint buttonPressEvent(GtkWidget *widget, GdkEventButton *event,
 		struct GlobalParams *params) {
 #if Debug
 	printf("Button pressed.\n");
@@ -259,7 +253,7 @@ gint button_press_event(GtkWidget *widget, GdkEventButton *event,
 /* When released the procedure ends the tracking of mouse movement and	*/
 /* rotates the atoms to their final position.				*/
 /************************************************************************/
-gint button_release_event(GtkWidget *widget, GdkEventButton *event,
+gint buttonReleaseEvent(GtkWidget *widget, GdkEventButton *event,
 		struct GlobalParams *params) {
 #if Debug
 	printf("Button released.\n");
@@ -282,7 +276,7 @@ gint button_release_event(GtkWidget *widget, GdkEventButton *event,
 /* atoms according to the movement of the mouse while the left button	*/
 /* is pressed down.							*/
 /************************************************************************/
-gint motion_notify_event(GtkWidget *widget, GdkEventMotion *event,
+gint motionNotifyEvent(GtkWidget *widget, GdkEventMotion *event,
 		struct GlobalParams *params) {
 	gint x, y;
 	char xstr[64];
@@ -340,7 +334,7 @@ gint motion_notify_event(GtkWidget *widget, GdkEventMotion *event,
 /* was pressed, it reinitializes gdpc if necessary and then continous	*/
 /* the animation.							*/
 /************************************************************************/
-void SetupStartOk(struct GlobalParams *params) {
+void setupStartOk(struct GlobalParams *params) {
 	if (params->absxsize != params->oldxsize
 			|| params->absysize != params->oldysize) {
 		gtk_widget_set_size_request(params->drawing_area,
@@ -377,7 +371,7 @@ void SetupStartOk(struct GlobalParams *params) {
 /* This function is called at the end of setwindow if the cancel button */
 /* was pressed. It simply continous the animation.						*/
 /************************************************************************/
-void SetupStartCancel(struct GlobalParams *params) {
+void setupStartCancel(struct GlobalParams *params) {
 	params->setupstop = FALSE;
 }
 
@@ -385,9 +379,7 @@ void SetupStartCancel(struct GlobalParams *params) {
 /* This function is called when there has been a change in angle from	*/
 /* pressing a button.													*/
 /************************************************************************/
-void drawrotate(GtkWidget *widget, struct GlobalParams *params) {
-	printf("Drawing rotated scene.\n");
-
+void triggerImageRedraw(GtkWidget *widget, struct GlobalParams *params) {
 	gtk_widget_queue_draw(params->drawing_area);
 }
 
@@ -439,12 +431,7 @@ gboolean switchToNextFrame(struct GlobalParams *params) {
 
 				previousFrame = DrawData.currentFrame;
 				DrawData.currentFrame = &(params->framedata[DrawData.nextFrameNum]);
-/*				if (DrawData.currentFrame != NULL) {
-					if ((DrawData.currentFrame)->lastFrame) {
-						printf("Current frame is last one\n");
-					}
-				}
-*/
+
 				gtk_widget_queue_draw(params->drawing_area);
 
 				if (previousFrame != NULL) {
@@ -578,7 +565,7 @@ void StartEverything(struct GlobalParams *params) {
 	gtk_container_set_border_width(GTK_CONTAINER (window), 5);
 
 	g_signal_connect_swapped(G_OBJECT (window), "key_press_event",
-			G_CALLBACK (key_press_event), NULL);
+			G_CALLBACK (keyPressEvent), NULL);
 
 	/* Create boxes for outlay. */
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -613,12 +600,12 @@ void StartEverything(struct GlobalParams *params) {
 			G_CALLBACK (updateImageArea), params);
 
 	g_signal_connect(G_OBJECT (drawing_area), "button_press_event",
-			G_CALLBACK (button_press_event), params);
+			G_CALLBACK (buttonPressEvent), params);
 	g_signal_connect(G_OBJECT (drawing_area), "button_release_event",
-			G_CALLBACK (button_release_event), params);
+			G_CALLBACK (buttonReleaseEvent), params);
 
 	g_signal_connect(G_OBJECT (drawing_area), "motion_notify_event",
-			G_CALLBACK (motion_notify_event), params);
+			G_CALLBACK (motionNotifyEvent), params);
 
 	gtk_widget_set_events(
 			drawing_area,
@@ -658,23 +645,23 @@ void StartEverything(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (reseto_button), "clicked", G_CALLBACK (resetob),
 			(gpointer) params);
 
-	/* Create restart button. */
+	/* Create restartAnimation button. */
 	restart_button = gtk_button_new_with_mnemonic("_Restart");
 	gtk_box_pack_start(GTK_BOX (hboxsetup), restart_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (restart_button), "clicked", G_CALLBACK (restart),
+	g_signal_connect(G_OBJECT (restart_button), "clicked", G_CALLBACK (restartAnimation),
 			(gpointer) params);
 
 	setup_button = gtk_button_new_with_mnemonic("_Setup");
 	;
 	gtk_box_pack_start(GTK_BOX (hboxsetup), setup_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (setup_button), "clicked", G_CALLBACK (setup),
+	g_signal_connect(G_OBJECT (setup_button), "clicked", G_CALLBACK (setupButtonPressed),
 			(gpointer) params);
 	gtk_box_pack_start(GTK_BOX (vboxleft), hboxsetup, TRUE, TRUE, 0);
 
 	/* Create pause button. */
 	pause_button = gtk_toggle_button_new_with_mnemonic("_Pause");
 	gtk_box_pack_start(GTK_BOX (vboxmiddle), pause_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (pause_button), "clicked", G_CALLBACK (pauseb),
+	g_signal_connect(G_OBJECT (pause_button), "clicked", G_CALLBACK (pauseButtonPressed),
 			(gpointer) params);
 
 	/* Create quit button. */
@@ -798,7 +785,7 @@ void StartEverything(struct GlobalParams *params) {
 #endif
 
 	th_a =
-			g_thread_create ((GThreadFunc) readinput, (gpointer) params, TRUE, NULL);
+			g_thread_create ((GThreadFunc) readInput, (gpointer) params, TRUE, NULL);
 	if (th_a == NULL) {
 		fprintf(stderr, "Creating read thread failed.\n");
 		gtk_main_quit();

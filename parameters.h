@@ -26,7 +26,7 @@
 
 /* Here the versionnumber of gdpc is set, that will be reported. */
 
-#define GDPCVER "2.2.5"
+#define GDPCVER "1.0.0"
 
 /* Define the value of pi */
 
@@ -201,8 +201,8 @@ struct DrawStruct {
 /* Declaration of extern functions used throughout the program */
 
 void StartEverything(struct GlobalParams *params);
-void SetupStartOk(struct GlobalParams *params);
-void SetupStartCancel(struct GlobalParams *params);
+void setupStartOk(struct GlobalParams *params);
+void setupStartCancel(struct GlobalParams *params);
 void SetupRedraw(struct GlobalParams *params);
 
 void cleardrawable(struct DrawStruct DrawData);
@@ -230,7 +230,7 @@ void resetob(GtkWidget *widget, struct GlobalParams *params);
 
 void sortatoms(struct xyzstruc *coords, gint left, gint right, gboolean sort);
 
-void drawrotate(GtkWidget *widget, struct GlobalParams *params);
+void triggerImageRedraw(GtkWidget *widget, struct GlobalParams *params);
 void resetic();
 
 gint switchToNextFrame(struct GlobalParams *params);
@@ -238,6 +238,6 @@ gint switchToNextFrame(struct GlobalParams *params);
 //gint allocatecolors(GdkColor **colors, gint colorset, gint mode);
 void setColorset(struct GlobalParams *params, gint colorsetnum);
 
-void * readinput(struct GlobalParams *params);
+void * readInput(struct GlobalParams *params);
 
 gboolean handleargs(int args, char **argv, struct GlobalParams *params);

@@ -37,7 +37,7 @@ gint lastframedone = 0;
 /* Reads the input file and processes it, then it calls rotateatoms to	*/
 /* rotate the coordinates and draw them.								*/
 /************************************************************************/
-void * readinput(struct GlobalParams *params) {
+void * readInput(struct GlobalParams *params) {
 	gchar buf[160];
 	gchar arg[20][64];
 	gchar timestr[64] = "0.0\0";

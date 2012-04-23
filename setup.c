@@ -187,7 +187,7 @@ void okeypressed(GtkWidget *widget, struct GlobalParams *params) {
 	if (!params->StartedAlready)
 		StartEverything(params);
 	else
-		SetupStartOk(params);
+		setupStartOk(params);
 	destroy(widget, NULL);
 }
 
@@ -294,7 +294,7 @@ void redrawpressed(GtkWidget *widget, struct GlobalParams *params) {
 /* discards all the buttonpresses and kills the setup window.		*/
 /************************************************************************/
 void cancelpressed(GtkWidget *widget, struct GlobalParams *params) {
-	SetupStartCancel(params);
+	setupStartCancel(params);
 	destroy(widget, NULL);
 }
 

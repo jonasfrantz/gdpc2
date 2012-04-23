@@ -43,7 +43,7 @@ void xplusb(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->iangle = 1.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void yplusb(GtkWidget *widget, struct GlobalParams *params) {
@@ -57,7 +57,7 @@ void yplusb(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->jangle = 1.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void zplusb(GtkWidget *widget, struct GlobalParams *params) {
@@ -71,7 +71,7 @@ void zplusb(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->kangle = 1.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void xminusb(GtkWidget *widget, struct GlobalParams *params) {
@@ -85,7 +85,7 @@ void xminusb(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->iangle = -1.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void yminusb(GtkWidget *widget, struct GlobalParams *params) {
@@ -99,7 +99,7 @@ void yminusb(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->jangle = -1.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void zminusb(GtkWidget *widget, struct GlobalParams *params) {
@@ -113,7 +113,7 @@ void zminusb(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->kangle = -1.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 /************************************************************************/
@@ -130,7 +130,7 @@ void xplus10b(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->iangle = 10.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void yplus10b(GtkWidget *widget, struct GlobalParams *params) {
@@ -144,7 +144,7 @@ void yplus10b(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->jangle = 10.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void zplus10b(GtkWidget *widget, struct GlobalParams *params) {
@@ -158,7 +158,7 @@ void zplus10b(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->kangle = 10.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void xminus10b(GtkWidget *widget, struct GlobalParams *params) {
@@ -172,7 +172,7 @@ void xminus10b(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->iangle = -10.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void yminus10b(GtkWidget *widget, struct GlobalParams *params) {
@@ -186,7 +186,7 @@ void yminus10b(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->jangle = -10.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 void zminus10b(GtkWidget *widget, struct GlobalParams *params) {
@@ -200,7 +200,7 @@ void zminus10b(GtkWidget *widget, struct GlobalParams *params) {
 
 	params->kangle = -10.0;
 	if (params->pausecheck || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
 
 /************************************************************************/
@@ -209,7 +209,7 @@ void zminus10b(GtkWidget *widget, struct GlobalParams *params) {
 /************************************************************************/
 void resetob(GtkWidget *widget, struct GlobalParams *params) {
 	resetic();
-	drawrotate(widget, params);
+	triggerImageRedraw(widget, params);
 }
 
 /************************************************************************/
@@ -230,5 +230,5 @@ void mouserotate(GtkWidget *widget, gint xdelta, gint ydelta,
 	params->imangle = (xdelta * 90.0) / (double) params->absxsize;
 	params->jmangle = (ydelta * 90.0) / (double) params->absysize;
 	if (params->pausecheck || params->mbsleep || getval == 0)
-		drawrotate(widget, params);
+		triggerImageRedraw(widget, params);
 }
