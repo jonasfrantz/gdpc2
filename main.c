@@ -104,7 +104,6 @@ void restartAnimation(GtkWidget *widget, struct GlobalParams *params) {
 	}
 	fseek(NewFP, SEEK_SET, 0);
 	g_mutex_unlock(params->atEnd);
-	cleardrawable(DrawData);
 	params->numframe = 1;
 
 #if Debug
@@ -169,8 +168,8 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 			DrawData.crXSize = width;
 			DrawData.crYSize = height;
 
-			cleardrawable(DrawData);
-			rotateatoms(DrawData);
+			clearDrawable(DrawData);
+			rotateAtoms(DrawData);
 
 			cairo_set_source_surface(cr, first, 0, 0);
 			cairo_paint(cr);
@@ -348,7 +347,6 @@ void setupStartOk(struct GlobalParams *params) {
 			|| params->tcolumn != params->oldtc) {
 		fseek(params->fp, SEEK_SET, 0);
 		g_mutex_unlock(params->atEnd);
-		cleardrawable(DrawData);
 	}
 	if (strlen(params->file) > 0) {
 		fclose(params->fp);
@@ -360,9 +358,6 @@ void setupStartOk(struct GlobalParams *params) {
 		fseek(params->fp, 0, 0);
 		params->numframe = 1;
 		g_mutex_unlock(params->atEnd);
-		cleardrawable(DrawData);
-	} else {
-		rotateatoms(DrawData);
 	}
 	params->setupstop = FALSE;
 }
@@ -412,6 +407,14 @@ gboolean switchToNextFrame(struct GlobalParams *params) {
 		if (!params->pausecheck && !params->setupstop
 				&& (!params->mbsleep || MB_pressed)) {
 			MB_pressed = FALSE;
+
+			if (params->once) {
+				if (DrawData.currentFrame != NULL) {
+					if ((DrawData.currentFrame)->lastFrame) {
+						gtk_main_quit();
+					}
+				}
+			}
 
 			previousDrawn = FALSE;
 			if (DrawData.currentFrame != NULL) {
@@ -497,14 +500,6 @@ gboolean switchToNextFrame(struct GlobalParams *params) {
 	sprintf(tstr, "Z angle: %f", params->zc);
 	gtk_entry_set_text((GtkEntry *) zc_entry, tstr);
 
-	if (params->once) {
-/*		if (g_mutex_trylock(params->atEnd) == TRUE) {
-			g_mutex_unlock(params->atEnd);
-		} else {
-			gtk_main_quit();
-		} */
-	}
-
 	return TRUE;
 }
 
@@ -517,15 +512,12 @@ void SetupRedraw(struct GlobalParams *params) {
 			|| params->absysize != params->oldysize) {
 		gtk_widget_set_size_request(params->drawing_area,
 				params->absxsize + 2 * xborder, params->absysize + 2 * yborder);
-
-		cleardrawable(DrawData);
 	}
 
-	if (params->erase)
-		cleardrawable(DrawData);
 	setColorset(params, params->colorset);
 
-	rotateatoms(DrawData);
+	triggerImageRedraw(NULL, params);
+
 	params->oldxc = params->xcolumn;
 	params->oldyc = params->ycolumn;
 	params->oldzc = params->zcolumn;

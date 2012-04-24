@@ -177,7 +177,7 @@ struct GlobalParams {
 	gboolean dumpnum; /* Do we want number-of-frame or timestamp on dumped images ? */
 	gboolean tifjpg; /* Do we want tifs or jpgs to be dumped ? */
 	gboolean StartedAlready; /* Is the animation started ? */
-	gboolean usetypes; /* Will we be coloring according to atomtypes ? */
+	gboolean usetypes; /* Will the be coloring according to atomtypes ? */
 	gboolean once;
 	gchar fstring[30]; /* String to check for in inputlines */
 	gchar file[256]; /* Name of input file */
@@ -205,11 +205,11 @@ void setupStartOk(struct GlobalParams *params);
 void setupStartCancel(struct GlobalParams *params);
 void SetupRedraw(struct GlobalParams *params);
 
-void cleardrawable(struct DrawStruct DrawData);
+void clearDrawable(struct DrawStruct DrawData);
 
 void setupwindow(struct GlobalParams *params);
 
-void rotateatoms(struct DrawStruct DrawData);
+void rotateAtoms(struct DrawStruct DrawData);
 
 void mouserotate(GtkWidget *widget, gint xdelta, gint ydelta,
 		struct GlobalParams *params);

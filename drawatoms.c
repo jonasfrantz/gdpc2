@@ -121,7 +121,7 @@ void drawcircles(cairo_t *cr, double xmin, double xmax, double ymin,
 /* This function rotates the coordinates of the atoms, sorts them and	*/
 /* calls the drawcircles to draw them.					*/
 /************************************************************************/
-void rotateatoms(struct DrawStruct DrawData) {
+void rotateAtoms(struct DrawStruct DrawData) {
 	gint i, j, numatoms;
 
 	double isin, icos, jsin, jcos, ksin, kcos;
@@ -157,7 +157,7 @@ void rotateatoms(struct DrawStruct DrawData) {
 	jmcos = cos(params->imangle * (-PI / 180.0));
 
 	if (params->erase) {
-		cleardrawable(DrawData);
+		clearDrawable(DrawData);
 	}
 
 	newcoords = (struct xyzstruc *) g_malloc(
@@ -320,7 +320,7 @@ void rotateatoms(struct DrawStruct DrawData) {
 /* Clears the drawable area and draws the rectangle which represents	*/
 /* border of the simulationbox.						*/
 /************************************************************************/
-void cleardrawable(struct DrawStruct DrawData) {
+void clearDrawable(struct DrawStruct DrawData) {
 
 	cairo_rectangle(DrawData.cr, 0.0, 0.0, DrawData.crXSize, DrawData.crYSize);
 	if (DrawData.params->whitebg) {
