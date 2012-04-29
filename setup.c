@@ -33,7 +33,7 @@
 /* GTK widgets which define changes in setup window */
 
 /* Different windows and okey-button */
-GtkWidget *filew, *setupwin, *okeyb;
+GtkWidget *filew, *setupwin, *okButton;
 
 /* Entries, check-button, spin-buttons and so on */
 GtkWidget *file_entry, *dump_entry, *dump_label, *dtcheck, *dncheck;
@@ -48,13 +48,13 @@ GtkAdjustment *adjcube, *adjx, *adjy, *adjz, *adjxc, *adjyc, *adjzc, *adjtc;
 GtkAdjustment *adjssizex, *adjssizey, *adjsleep, *adjd;
 GtkAdjustment *adjx2, *adjy2, *adjz2, *adjscol;
 
-struct GlobalParams newparams; /* New values if OK is pressed, else ignored */
+struct Configuration setupConfig; /* New values if OK is pressed, else ignored */
 
 gboolean usescol, usedump, filewopen; /* Help variables to define usage of
  specific features */
 
 /************************************************************************/
-/* This function just kills the setup window. 				*/
+/* This function just kills the setup window. 							*/
 /************************************************************************/
 void destroy(GtkWidget *widget, gpointer data) {
 	if (filewopen)
@@ -64,7 +64,7 @@ void destroy(GtkWidget *widget, gpointer data) {
 
 /************************************************************************/
 /* This function creates a filebrowser window, connects all the buttons	*/
-/* and shows it.							*/
+/* and shows it.														*/
 /************************************************************************/
 void filebrowser(GtkWidget *widget, gpointer data) {
 	GtkWidget *dialog;
@@ -84,110 +84,126 @@ void filebrowser(GtkWidget *widget, gpointer data) {
 }
 
 /************************************************************************/
-/* This function is called when the OK button is pressed, it gets all	*/
-/* the filenames and sets all the variables according to the buttons 	*/
-/* and spinners.							*/
 /************************************************************************/
-void okeypressed(GtkWidget *widget, struct GlobalParams *params) {
+struct Configuration * getNewConfigurationFromSetup(struct Context *context) {
+	struct Configuration *newconfig;
 	double tmpvalue;
-	sprintf(params->file, "%s", gtk_entry_get_text(GTK_ENTRY (file_entry)));
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (xspinner));
 
+	newconfig = copyConfiguration(context->config);
+
+	sprintf(newconfig->file, "%s", gtk_entry_get_text(GTK_ENTRY (file_entry)));
+
+	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (xspinner));
 	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->xmin = tmpvalue;
+		newconfig->xmin = tmpvalue;
 	}
 	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (x2spinner));
 	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->xmax = tmpvalue;
+		newconfig->xmax = tmpvalue;
 	}
 	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (yspinner));
 	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->ymin = tmpvalue;
+		newconfig->ymin = tmpvalue;
 	}
 	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (y2spinner));
 	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->ymax = tmpvalue;
+		newconfig->ymax = tmpvalue;
 	}
 	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (zspinner));
 	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->zmin = tmpvalue;
+		newconfig->zmin = tmpvalue;
 	}
 	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (z2spinner));
 	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->zmax = tmpvalue;
+		newconfig->zmax = tmpvalue;
 	}
 
 	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (cubespinner));
 	if (tmpvalue > 0.0) {
-		if (params->xmin == 65535.0) {
-			params->xmin = -tmpvalue;
-			params->xmax = tmpvalue;
+		if (newconfig->xmin == 65535.0) {
+			newconfig->xmin = -tmpvalue;
+			newconfig->xmax = tmpvalue;
 		}
-		if (params->ymin == 65535.0) {
-			params->ymin = -tmpvalue;
-			params->ymax = tmpvalue;
+		if (newconfig->ymin == 65535.0) {
+			newconfig->ymin = -tmpvalue;
+			newconfig->ymax = tmpvalue;
 		}
-		if (params->zmin == 65535.0) {
-			params->zmin = -tmpvalue;
-			params->zmax = tmpvalue;
+		if (newconfig->zmin == 65535.0) {
+			newconfig->zmin = -tmpvalue;
+			newconfig->zmax = tmpvalue;
 		}
 	}
 
-	params->radius = gtk_spin_button_get_value_as_int(
+	newconfig->radius = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (dspinner));
-	params->xcolumn = gtk_spin_button_get_value_as_int(
+	newconfig->xcolumn = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (xcspinner));
-	params->ycolumn = gtk_spin_button_get_value_as_int(
+	newconfig->ycolumn = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (ycspinner));
-	params->zcolumn = gtk_spin_button_get_value_as_int(
+	newconfig->zcolumn = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (zcspinner));
-	params->tcolumn = gtk_spin_button_get_value_as_int(
+	newconfig->tcolumn = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (tcspinner));
-	params->absxsize = gtk_spin_button_get_value_as_int(
+	newconfig->absxsize = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (ssxspinner));
-	params->absysize = gtk_spin_button_get_value_as_int(
+	newconfig->absysize = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (ssyspinner));
 	tmpvalue = (gint) 1000
 			* gtk_spin_button_get_value(GTK_SPIN_BUTTON (sleepspinner));
 	if (tmpvalue < MININTERVAL)
-		params->interval = MININTERVAL;
+		newconfig->interval = MININTERVAL;
 	else
-		params->interval = tmpvalue;
+		newconfig->interval = tmpvalue;
 
 	if (usescol) {
-		sprintf(params->fstring, "%s",
+		sprintf(newconfig->fstring, "%s",
 				gtk_entry_get_text(GTK_ENTRY (scol_entry)));
-		params->scol = gtk_spin_button_get_value_as_int(
+		newconfig->scol = gtk_spin_button_get_value_as_int(
 				GTK_SPIN_BUTTON (scolspinner));
 	} else {
-		params->scol = 0;
+		newconfig->scol = 0;
 	}
 
 	if (usedump) {
-		sprintf(params->dumpname, "%s",
+		sprintf(newconfig->dumpname, "%s",
 				gtk_entry_get_text(GTK_ENTRY (dump_entry)));
 	} else {
-		*(params->dumpname) = '\0';
+		*(newconfig->dumpname) = '\0';
 	}
 
-	sprintf(params->timedelim, "%s",
+	sprintf(newconfig->timedelim, "%s",
 			gtk_entry_get_text(GTK_ENTRY (timedel_entry)));
 
-	params->fxyz = newparams.fxyz;
-	params->mode = newparams.mode;
-	params->vary = newparams.vary;
-	params->colorset = newparams.colorset;
-	params->erase = newparams.erase;
-	params->whitebg = newparams.whitebg;
-	params->dumpnum = newparams.dumpnum;
-	params->sort = newparams.sort;
-	params->tifjpg = newparams.tifjpg;
-	params->usetypes = newparams.usetypes;
+	newconfig->fxyz = setupConfig.fxyz;
+	newconfig->mode = setupConfig.mode;
+	newconfig->vary = setupConfig.vary;
+	newconfig->colorset = setupConfig.colorset;
+	newconfig->erase = setupConfig.erase;
+	newconfig->whitebg = setupConfig.whitebg;
+	newconfig->dumpnum = setupConfig.dumpnum;
+	newconfig->sort = setupConfig.sort;
+	newconfig->tifjpg = setupConfig.tifjpg;
+	newconfig->usetypes = setupConfig.usetypes;
 
-	if (!params->StartedAlready)
-		StartEverything(params);
-	else
-		setupStartOk(params);
+	return newconfig;
+}
+
+/************************************************************************/
+/* This function is called when the OK button is pressed, it gets all	*/
+/* the filenames and sets all the variables according to the buttons 	*/
+/* and spinners.														*/
+/************************************************************************/
+void okeypressed(GtkWidget *widget, struct Context *context) {
+	struct Configuration *newconfig;
+
+	newconfig = getNewConfigurationFromSetup(context);
+
+	if (!context->StartedAlready) {
+		context->config = newconfig;
+		StartEverything(context);
+	} else {
+		setupStartOk(context, newconfig);
+	}
 	destroy(widget, NULL);
 }
 
@@ -196,105 +212,20 @@ void okeypressed(GtkWidget *widget, struct GlobalParams *params) {
 /* practically does the same thing as okeypressed, but it doesn't kill	*/
 /* the setup window.							*/
 /************************************************************************/
-void redrawpressed(GtkWidget *widget, struct GlobalParams *params) {
-	double tmpvalue;
-	sprintf(params->file, "%s", gtk_entry_get_text(GTK_ENTRY (file_entry)));
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (xspinner));
-	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->xmin = tmpvalue;
-	}
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (x2spinner));
-	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->xmax = tmpvalue;
-	}
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (yspinner));
-	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->ymin = tmpvalue;
-	}
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (y2spinner));
-	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->ymax = tmpvalue;
-	}
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (zspinner));
-	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->zmin = tmpvalue;
-	}
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (z2spinner));
-	if (tmpvalue > 0.0 || tmpvalue < 0.0) {
-		params->zmax = tmpvalue;
-	}
+void applyPressed(GtkWidget *widget, struct Context *context) {
+	struct Configuration *newconfig;
 
-	tmpvalue = gtk_spin_button_get_value(GTK_SPIN_BUTTON (cubespinner));
-	if (tmpvalue > 0.0) {
-		if (params->xmin == 65535.0) {
-			params->xmin = -tmpvalue;
-			params->xmax = tmpvalue;
-		}
-		if (params->ymin == 65535.0) {
-			params->ymin = -tmpvalue;
-			params->ymax = tmpvalue;
-		}
-		if (params->zmin == 65535.0) {
-			params->zmin = -tmpvalue;
-			params->zmax = tmpvalue;
-		}
-	}
+	newconfig = getNewConfigurationFromSetup(context);
 
-	params->radius = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (dspinner));
-	params->xcolumn = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (xcspinner));
-	params->ycolumn = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (ycspinner));
-	params->zcolumn = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (zcspinner));
-	params->tcolumn = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (tcspinner));
-	params->absxsize = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (ssxspinner));
-	params->absysize = gtk_spin_button_get_value_as_int(
-			GTK_SPIN_BUTTON (ssyspinner));
-	tmpvalue = (gint) 1000
-			* gtk_spin_button_get_value(GTK_SPIN_BUTTON (sleepspinner));
-	if (tmpvalue < MININTERVAL)
-		params->interval = MININTERVAL;
-	else
-		params->interval = tmpvalue;
-
-	if (usescol) {
-		sprintf(params->fstring, "%s",
-				gtk_entry_get_text(GTK_ENTRY (scol_entry)));
-		params->scol = gtk_spin_button_get_value_as_int(
-				GTK_SPIN_BUTTON (scolspinner));
-	} else {
-		params->scol = 0;
-	}
-
-	if (usedump) {
-		sprintf(params->dumpname, "%s",
-				gtk_entry_get_text(GTK_ENTRY (dump_entry)));
-	} else {
-		*(params->dumpname) = '\0';
-	}
-
-	params->fxyz = newparams.fxyz;
-	params->mode = newparams.mode;
-	params->vary = newparams.vary;
-	params->colorset = newparams.colorset;
-	params->erase = newparams.erase;
-	params->whitebg = newparams.whitebg;
-	params->dumpnum = newparams.dumpnum;
-	params->sort = newparams.sort;
-
-	SetupRedraw(params);
+	setupApplyNewConfig(context, newconfig);
 }
 
 /************************************************************************/
 /* This function is called when the Cancel button is pressed, it 	*/
 /* discards all the buttonpresses and kills the setup window.		*/
 /************************************************************************/
-void cancelpressed(GtkWidget *widget, struct GlobalParams *params) {
-	setupStartCancel(params);
+void cancelPressed(GtkWidget *widget, struct Context *context) {
+	setupStartCancel(context);
 	destroy(widget, NULL);
 }
 
@@ -302,7 +233,7 @@ void cancelpressed(GtkWidget *widget, struct GlobalParams *params) {
 /* This function is called when the Quit button is pressed, it quits 	*/
 /* the main program.							*/
 /************************************************************************/
-void quitpressed(GtkWidget *widget, gpointer data) {
+void quitPressed(GtkWidget *widget, gpointer data) {
 	gtk_main_quit();
 }
 
@@ -322,12 +253,12 @@ void filechange(GtkWidget *widget, gpointer data) {
 					|| strlen(gtk_entry_get_text(GTK_ENTRY (dump_entry))) > 0)) {
 		fp = fopen(gtk_entry_get_text(GTK_ENTRY (file_entry)), "r");
 		if (fp != NULL) {
-			gtk_widget_set_sensitive(okeyb, TRUE);
+			gtk_widget_set_sensitive(okButton, TRUE);
 			fclose(fp);
 		} else
-			gtk_widget_set_sensitive(okeyb, FALSE);
+			gtk_widget_set_sensitive(okButton, FALSE);
 	} else
-		gtk_widget_set_sensitive(okeyb, FALSE);
+		gtk_widget_set_sensitive(okButton, FALSE);
 }
 
 /************************************************************************/
@@ -335,7 +266,7 @@ void filechange(GtkWidget *widget, gpointer data) {
 /* pressed.								*/
 /************************************************************************/
 void toggle_checkxyz(GtkWidget *widget, gpointer data) {
-	newparams.fxyz = TRUE;
+	setupConfig.fxyz = TRUE;
 	gtk_widget_set_sensitive(usetypescheck, TRUE);
 	gtk_widget_set_sensitive(timedel_entry, TRUE);
 	gtk_widget_set_sensitive(timedel_label, TRUE);
@@ -346,7 +277,7 @@ void toggle_checkxyz(GtkWidget *widget, gpointer data) {
 /* is pressed.								*/
 /************************************************************************/
 void toggle_checkaff(GtkWidget *widget, gpointer data) {
-	newparams.fxyz = FALSE;
+	setupConfig.fxyz = FALSE;
 	gtk_widget_set_sensitive(usetypescheck, FALSE);
 	gtk_widget_set_sensitive(timedel_entry, FALSE);
 	gtk_widget_set_sensitive(timedel_label, FALSE);
@@ -357,7 +288,7 @@ void toggle_checkaff(GtkWidget *widget, gpointer data) {
 /* pressed.								*/
 /************************************************************************/
 void toggle_checkm0(GtkWidget *widget, gpointer data) {
-	newparams.mode = 0;
+	setupConfig.mode = 0;
 }
 
 /************************************************************************/
@@ -365,7 +296,7 @@ void toggle_checkm0(GtkWidget *widget, gpointer data) {
 /* pressed.								*/
 /************************************************************************/
 void toggle_checkm1(GtkWidget *widget, gpointer data) {
-	newparams.mode = 1;
+	setupConfig.mode = 1;
 }
 
 /************************************************************************/
@@ -373,63 +304,63 @@ void toggle_checkm1(GtkWidget *widget, gpointer data) {
 /* pressed.								*/
 /************************************************************************/
 void toggle_checkm2(GtkWidget *widget, gpointer data) {
-	newparams.mode = 2;
+	setupConfig.mode = 2;
 }
 
 /************************************************************************/
 /* This function is called when the varymode 0 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkv0(GtkWidget *widget, gpointer data) {
-	newparams.vary = 0;
+	setupConfig.vary = 0;
 }
 
 /************************************************************************/
 /* This function is called when the varymode 1 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkv1(GtkWidget *widget, gpointer data) {
-	newparams.vary = 1;
+	setupConfig.vary = 1;
 }
 
 /************************************************************************/
 /* This function is called when the varymode 2 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkv2(GtkWidget *widget, gpointer data) {
-	newparams.vary = 2;
+	setupConfig.vary = 2;
 }
 
 /************************************************************************/
 /* This function is called when the colorset 0 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkc0(GtkWidget *widget, gpointer data) {
-	newparams.colorset = 0;
+	setupConfig.colorset = 0;
 }
 
 /************************************************************************/
 /* This function is called when the colorset 1 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkc1(GtkWidget *widget, gpointer data) {
-	newparams.colorset = 1;
+	setupConfig.colorset = 1;
 }
 
 /************************************************************************/
 /* This function is called when the colorset 2 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkc2(GtkWidget *widget, gpointer data) {
-	newparams.colorset = 2;
+	setupConfig.colorset = 2;
 }
 
 /************************************************************************/
 /* This function is called when the colorset 3 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkc3(GtkWidget *widget, gpointer data) {
-	newparams.colorset = 3;
+	setupConfig.colorset = 3;
 }
 
 /************************************************************************/
 /* This function is called when the colorset 4 radiobutton is pressed.	*/
 /************************************************************************/
 void toggle_checkc4(GtkWidget *widget, gpointer data) {
-	newparams.colorset = 4;
+	setupConfig.colorset = 4;
 }
 
 /************************************************************************/
@@ -437,7 +368,7 @@ void toggle_checkc4(GtkWidget *widget, gpointer data) {
 /* pressed.								*/
 /************************************************************************/
 void toggle_checkdt(GtkWidget *widget, gpointer data) {
-	newparams.dumpnum = FALSE;
+	setupConfig.dumpnum = FALSE;
 }
 
 /************************************************************************/
@@ -445,18 +376,18 @@ void toggle_checkdt(GtkWidget *widget, gpointer data) {
 /* pressed. 								*/
 /************************************************************************/
 void toggle_checkdn(GtkWidget *widget, gpointer data) {
-	newparams.dumpnum = TRUE;
+	setupConfig.dumpnum = TRUE;
 }
 
 /************************************************************************/
 /* This function is called when the erase checkbutton is pressed. 	*/
 /************************************************************************/
 void toggle_erase(GtkToggleButton *widget, gpointer data) {
-	newparams.erase = gtk_toggle_button_get_active(widget);
+	setupConfig.erase = gtk_toggle_button_get_active(widget);
 }
 
 void toggle_usetypes(GtkToggleButton *widget, gpointer data) {
-	newparams.usetypes = gtk_toggle_button_get_active(widget);
+	setupConfig.usetypes = gtk_toggle_button_get_active(widget);
 }
 
 /************************************************************************/
@@ -479,7 +410,7 @@ void toggle_checkdumptif(GtkWidget *widget, gpointer data) {
 	gtk_widget_set_sensitive(dump_label, TRUE);
 	gtk_widget_set_sensitive(dncheck, TRUE);
 	gtk_widget_set_sensitive(dtcheck, TRUE);
-	newparams.tifjpg = TRUE;
+	setupConfig.tifjpg = TRUE;
 	filechange(widget, data);
 }
 
@@ -489,7 +420,7 @@ void toggle_checkdumpjpg(GtkWidget *widget, gpointer data) {
 	gtk_widget_set_sensitive(dump_label, TRUE);
 	gtk_widget_set_sensitive(dncheck, TRUE);
 	gtk_widget_set_sensitive(dtcheck, TRUE);
-	newparams.tifjpg = FALSE;
+	setupConfig.tifjpg = FALSE;
 	filechange(widget, data);
 }
 
@@ -497,7 +428,7 @@ void toggle_checkdumpjpg(GtkWidget *widget, gpointer data) {
 /* This function is called when the whitebg checkbutton is pressed.	*/
 /************************************************************************/
 void toggle_white(GtkToggleButton *widget, gpointer data) {
-	newparams.whitebg = gtk_toggle_button_get_active(widget);
+	setupConfig.whitebg = gtk_toggle_button_get_active(widget);
 }
 
 /************************************************************************/
@@ -505,9 +436,9 @@ void toggle_white(GtkToggleButton *widget, gpointer data) {
 /************************************************************************/
 void toggle_sortr(GtkToggleButton *widget, gpointer data) {
 	if (gtk_toggle_button_get_active(widget)) {
-		newparams.sort = 2;
+		setupConfig.sort = 2;
 	} else {
-		newparams.sort = 1;
+		setupConfig.sort = 1;
 	}
 }
 
@@ -521,7 +452,7 @@ void toggle_scol(GtkToggleButton *widget, gpointer data) {
 	gtk_widget_set_sensitive(scol_label, gtk_toggle_button_get_active(widget));
 	gtk_widget_set_sensitive(scol_entry, gtk_toggle_button_get_active(widget));
 	gtk_widget_set_sensitive(scolspinner, gtk_toggle_button_get_active(widget));
-	filechange(widget, data);
+	filechange((GtkWidget *) widget, data);
 }
 
 /************************************************************************/
@@ -577,8 +508,8 @@ void setspinlimits(GtkWidget *widget, gpointer data) {
 /* window or if gdpc is started without parameters. It sets up the	*/
 /* setup window and all its buttons and entries.			*/
 /************************************************************************/
-void setupwindow(struct GlobalParams *params) {
-	GtkWidget *browseb, *cancelb, *redrawb, *quitb, *check, *erasetoggle,
+void showSetupWindow(struct Context *context) {
+	GtkWidget *browseb, *cancelButton, *applyButton, *quitButton, *check, *erasetoggle,
 			*whitetoggle, *dumpcheck, *sortrtoggle;
 	GtkWidget *dumptifcheck, *dumpjpgcheck;
 	GtkWidget *vbox_main, *hbox_main, *vbox, *hbox1, *hbox2, *hbox3, *vboxright,
@@ -594,17 +525,17 @@ void setupwindow(struct GlobalParams *params) {
 	GtkWidget *hboxtd;
 	GSList *group;
 
-	newparams.mode = params->mode;
-	newparams.erase = params->erase;
-	newparams.whitebg = params->whitebg;
-	newparams.colorset = params->colorset;
-	newparams.fxyz = params->fxyz;
-	newparams.sort = params->sort;
-	newparams.vary = params->vary;
-	newparams.dumpnum = params->dumpnum;
-	newparams.tifjpg = params->tifjpg;
-	newparams.dumpnum = params->dumpnum;
-	newparams.usetypes = params->usetypes;
+	setupConfig.mode = context->config->mode;
+	setupConfig.erase = context->config->erase;
+	setupConfig.whitebg = context->config->whitebg;
+	setupConfig.colorset = context->config->colorset;
+	setupConfig.fxyz = context->config->fxyz;
+	setupConfig.sort = context->config->sort;
+	setupConfig.vary = context->config->vary;
+	setupConfig.dumpnum = context->config->dumpnum;
+	setupConfig.tifjpg = context->config->tifjpg;
+	setupConfig.dumpnum = context->config->dumpnum;
+	setupConfig.usetypes = context->config->usetypes;
 
 	usedump = FALSE;
 	usescol = FALSE;
@@ -664,8 +595,8 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_entry_set_max_length(GTK_ENTRY(file_entry), 160);
 	g_signal_connect(G_OBJECT (file_entry), "changed", G_CALLBACK (filechange),
 			G_OBJECT (setupwin));
-	if (params->file != NULL) {
-		gtk_entry_set_text(GTK_ENTRY (file_entry), params->file);
+	if (context->config->file != NULL) {
+		gtk_entry_set_text(GTK_ENTRY (file_entry), context->config->file);
 	}
 	gtk_widget_set_tooltip_text(file_entry, inputfilett);
 
@@ -681,9 +612,9 @@ void setupwindow(struct GlobalParams *params) {
 	ssx_label = gtk_label_new(" X : ");
 	ssy_label = gtk_label_new(" Y : ");
 
-	adjssizex = (GtkAdjustment *) gtk_adjustment_new(params->absxsize, 0.0,
+	adjssizex = (GtkAdjustment *) gtk_adjustment_new(context->config->absxsize, 0.0,
 			3000.0, 10.0, 5.0, 0.0);
-	adjssizey = (GtkAdjustment *) gtk_adjustment_new(params->absysize, 0.0,
+	adjssizey = (GtkAdjustment *) gtk_adjustment_new(context->config->absysize, 0.0,
 			3000.0, 10.0, 5.0, 0.0);
 
 	ssxspinner = gtk_spin_button_new(adjssizex, 0, 0);
@@ -724,15 +655,15 @@ void setupwindow(struct GlobalParams *params) {
 
 	x_label = gtk_label_new("X : ");
 
-	if (params->xmin == 65535.0) {
+	if (context->config->xmin == 65535.0) {
 		adjx = (GtkAdjustment *) gtk_adjustment_new(0.0, -10000.0, 0.0, 1.0,
 				5.0, 0.0);
 		adjx2 = (GtkAdjustment *) gtk_adjustment_new(0.0, 0.0, 10000.0, 1.0,
 				5.0, 0.0);
 	} else {
-		adjx = (GtkAdjustment *) gtk_adjustment_new(params->xmin, -10000.0,
-				params->xmax, 1.0, 5.0, 0.0);
-		adjx2 = (GtkAdjustment *) gtk_adjustment_new(params->xmax, params->xmin,
+		adjx = (GtkAdjustment *) gtk_adjustment_new(context->config->xmin, -10000.0,
+				context->config->xmax, 1.0, 5.0, 0.0);
+		adjx2 = (GtkAdjustment *) gtk_adjustment_new(context->config->xmax, context->config->xmin,
 				10000.0, 1.0, 5.0, 0.0);
 	}
 
@@ -750,15 +681,15 @@ void setupwindow(struct GlobalParams *params) {
 
 	y_label = gtk_label_new("Y : ");
 
-	if (params->ymin == 65535.0) {
+	if (context->config->ymin == 65535.0) {
 		adjy = (GtkAdjustment *) gtk_adjustment_new(0.0, -10000.0, 0.0, 1.0,
 				5.0, 0.0);
 		adjy2 = (GtkAdjustment *) gtk_adjustment_new(0.0, 0.0, 10000.0, 1.0,
 				5.0, 0.0);
 	} else {
-		adjy = (GtkAdjustment *) gtk_adjustment_new(params->ymin, -10000.0,
-				params->ymax, 1.0, 5.0, 0.0);
-		adjy2 = (GtkAdjustment *) gtk_adjustment_new(params->ymax, params->ymin,
+		adjy = (GtkAdjustment *) gtk_adjustment_new(context->config->ymin, -10000.0,
+				context->config->ymax, 1.0, 5.0, 0.0);
+		adjy2 = (GtkAdjustment *) gtk_adjustment_new(context->config->ymax, context->config->ymin,
 				10000.0, 1.0, 5.0, 0.0);
 	}
 
@@ -777,15 +708,15 @@ void setupwindow(struct GlobalParams *params) {
 
 	z_label = gtk_label_new("Z : ");
 
-	if (params->zmin == 65535.0) {
+	if (context->config->zmin == 65535.0) {
 		adjz = (GtkAdjustment *) gtk_adjustment_new(0.0, -10000.0, 0.0, 1.0,
 				5.0, 0.0);
 		adjz2 = (GtkAdjustment *) gtk_adjustment_new(0.0, 0.0, 10000.0, 1.0,
 				5.0, 0.0);
 	} else {
-		adjz = (GtkAdjustment *) gtk_adjustment_new(params->zmin, -10000.0,
-				params->zmax, 1.0, 5.0, 0.0);
-		adjz2 = (GtkAdjustment *) gtk_adjustment_new(params->zmax, params->zmin,
+		adjz = (GtkAdjustment *) gtk_adjustment_new(context->config->zmin, -10000.0,
+				context->config->zmax, 1.0, 5.0, 0.0);
+		adjz2 = (GtkAdjustment *) gtk_adjustment_new(context->config->zmax, context->config->zmin,
 				10000.0, 1.0, 5.0, 0.0);
 	}
 
@@ -821,7 +752,7 @@ void setupwindow(struct GlobalParams *params) {
 
 	xcol_label = gtk_label_new("X column : ");
 
-	adjxc = (GtkAdjustment *) gtk_adjustment_new(params->xcolumn, 1.0, 100.0,
+	adjxc = (GtkAdjustment *) gtk_adjustment_new(context->config->xcolumn, 1.0, 100.0,
 			1.0, 5.0, 0.0);
 
 	xcspinner = gtk_spin_button_new(adjxc, 0, 0);
@@ -832,7 +763,7 @@ void setupwindow(struct GlobalParams *params) {
 
 	ycol_label = gtk_label_new("Y column : ");
 
-	adjyc = (GtkAdjustment *) gtk_adjustment_new(params->ycolumn, 1.0, 100.0,
+	adjyc = (GtkAdjustment *) gtk_adjustment_new(context->config->ycolumn, 1.0, 100.0,
 			1.0, 5.0, 0.0);
 
 	ycspinner = gtk_spin_button_new(adjyc, 0, 0);
@@ -843,7 +774,7 @@ void setupwindow(struct GlobalParams *params) {
 
 	zcol_label = gtk_label_new("Z column : ");
 
-	adjzc = (GtkAdjustment *) gtk_adjustment_new(params->zcolumn, 1.0, 100.0,
+	adjzc = (GtkAdjustment *) gtk_adjustment_new(context->config->zcolumn, 1.0, 100.0,
 			1.0, 5.0, 0.0);
 
 	zcspinner = gtk_spin_button_new(adjzc, 0, 0);
@@ -854,7 +785,7 @@ void setupwindow(struct GlobalParams *params) {
 
 	tcol_label = gtk_label_new("t column : ");
 
-	adjtc = (GtkAdjustment *) gtk_adjustment_new(params->tcolumn, 1.0, 100.0,
+	adjtc = (GtkAdjustment *) gtk_adjustment_new(context->config->tcolumn, 1.0, 100.0,
 			1.0, 5.0, 0.0);
 
 	tcspinner = gtk_spin_button_new(adjtc, 0, 0);
@@ -868,12 +799,12 @@ void setupwindow(struct GlobalParams *params) {
 
 	timedel_entry = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(timedel_entry), 160);
-	gtk_entry_set_text(GTK_ENTRY (timedel_entry), params->timedelim);
+	gtk_entry_set_text(GTK_ENTRY (timedel_entry), context->config->timedelim);
 	timedel_label = gtk_label_new("Time unit : ");
 	gtk_box_pack_start(GTK_BOX (hboxtd), timedel_label, FALSE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX (hboxtd), timedel_entry, FALSE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX (vboxleft), hboxtd, FALSE, TRUE, 0);
-	if (!params->fxyz) {
+	if (!context->config->fxyz) {
 		gtk_widget_set_sensitive(timedel_entry, FALSE);
 		gtk_widget_set_sensitive(timedel_label, FALSE);
 	} else {
@@ -892,7 +823,7 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (check), "clicked", G_CALLBACK (toggle_checkxyz),
 			G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
-	if (params->fxyz) {
+	if (context->config->fxyz) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	}
 
@@ -900,14 +831,14 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "clicked", G_CALLBACK (toggle_checkaff),
 			G_OBJECT (setupwin));
-	if (!params->fxyz) {
+	if (!context->config->fxyz) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	}
 
 	g_signal_connect(G_OBJECT (usetypescheck), "toggled",
 			G_CALLBACK (toggle_usetypes), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxright), usetypescheck, TRUE, TRUE, 0);
-	if (params->usetypes)
+	if (context->config->usetypes)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (usetypescheck), TRUE);
 	else
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (usetypescheck), FALSE);
@@ -921,7 +852,7 @@ void setupwindow(struct GlobalParams *params) {
 
 	d_label = gtk_label_new("Size of drawn polygons :");
 
-	adjd = (GtkAdjustment *) gtk_adjustment_new(params->radius, 1.0, 100.0, 1.0,
+	adjd = (GtkAdjustment *) gtk_adjustment_new(context->config->radius, 1.0, 100.0, 1.0,
 			5.0, 0.0);
 
 	dspinner = gtk_spin_button_new(adjd, 0, 0);
@@ -934,7 +865,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkm0),
 			G_OBJECT (setupwin));
-	if (params->mode == 0)
+	if (context->config->mode == 0)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
 
@@ -942,7 +873,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkm1),
 			G_OBJECT (setupwin));
-	if (params->mode == 1)
+	if (context->config->mode == 1)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
 
@@ -950,7 +881,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkm2),
 			G_OBJECT (setupwin));
-	if (params->mode == 2)
+	if (context->config->mode == 2)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	empty_label = gtk_label_new("  ");
@@ -960,7 +891,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkv0),
 			G_OBJECT (setupwin));
-	if (params->vary == 0)
+	if (context->config->vary == 0)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
 
@@ -969,7 +900,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkv1),
 			G_OBJECT (setupwin));
-	if (params->vary == 1)
+	if (context->config->vary == 1)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
 
@@ -978,7 +909,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkv2),
 			G_OBJECT (setupwin));
-	if (params->vary == 2)
+	if (context->config->vary == 2)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
@@ -1017,7 +948,7 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkc0),
 			G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
-	if (params->colorset == 0)
+	if (context->config->colorset == 0)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	check = gtk_radio_button_new_with_label(group, "Use inverted colors");
@@ -1025,7 +956,7 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkc1),
 			G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
-	if (params->colorset == 1)
+	if (context->config->colorset == 1)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	check = gtk_radio_button_new_with_label(group, "Use cold colors");
@@ -1033,7 +964,7 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkc2),
 			G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
-	if (params->colorset == 2)
+	if (context->config->colorset == 2)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	check = gtk_radio_button_new_with_label(group, "Use cold colors 2");
@@ -1041,14 +972,14 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkc3),
 			G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
-	if (params->colorset == 3)
+	if (context->config->colorset == 3)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	check = gtk_radio_button_new_with_label(group, "Use greyscale colors");
 	gtk_box_pack_start(GTK_BOX (vboxmostright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "toggled", G_CALLBACK (toggle_checkc4),
 			G_OBJECT (setupwin));
-	if (params->colorset == 4)
+	if (context->config->colorset == 4)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 
 	separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
@@ -1062,7 +993,7 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (erasetoggle), "toggled",
 			G_CALLBACK (toggle_erase), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxmostright), erasetoggle, TRUE, TRUE, 0);
-	if (params->erase)
+	if (context->config->erase)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (erasetoggle), TRUE);
 
 	whitetoggle = gtk_check_button_new_with_label(
@@ -1070,19 +1001,19 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (whitetoggle), "toggled",
 			G_CALLBACK (toggle_white), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxmostright), whitetoggle, TRUE, TRUE, 0);
-	if (params->whitebg)
+	if (context->config->whitebg)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (whitetoggle), TRUE);
 
 	sortrtoggle = gtk_check_button_new_with_label(" Reverse sorting");
 	g_signal_connect(G_OBJECT (sortrtoggle), "toggled",
 			G_CALLBACK (toggle_sortr), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxmostright), sortrtoggle, TRUE, TRUE, 0);
-	if (params->sort == 2)
+	if (context->config->sort == 2)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (sortrtoggle), TRUE);
 
 	sleep_label = gtk_label_new("Delay between frames [s] : ");
 
-	adjsleep = (GtkAdjustment *) gtk_adjustment_new((params->interval / 1000),
+	adjsleep = (GtkAdjustment *) gtk_adjustment_new((context->config->interval / 1000),
 			0.0, 100.0, 0.1, 5.0, 0.0);
 
 	sleepspinner = gtk_spin_button_new(adjsleep, 0, 1);
@@ -1107,14 +1038,14 @@ void setupwindow(struct GlobalParams *params) {
 	dncheck = gtk_radio_button_new_with_label(group, " Add frame number");
 	gtk_widget_set_sensitive(dncheck, FALSE);
 
-	okeyb = gtk_button_new_from_stock(GTK_STOCK_OK);
+	okButton = gtk_button_new_from_stock(GTK_STOCK_OK);
 
 	dumpcheck = gtk_radio_button_new_with_label(NULL, " Do not dump images");
 	gtk_box_pack_start(GTK_BOX (vboxmostright), dumpcheck, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (dumpcheck), "toggled",
 			G_CALLBACK (toggle_checkdump), G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (dumpcheck));
-	if (strlen(params->dumpname) == 0)
+	if (strlen(context->config->dumpname) == 0)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (dumpcheck), TRUE);
 
 	dumptifcheck = gtk_radio_button_new_with_label(group,
@@ -1123,9 +1054,9 @@ void setupwindow(struct GlobalParams *params) {
 	g_signal_connect(G_OBJECT (dumptifcheck), "toggled",
 			G_CALLBACK (toggle_checkdumptif), G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (dumptifcheck));
-	if (strlen(params->dumpname) > 0 && params->tifjpg) {
+	if (strlen(context->config->dumpname) > 0 && context->config->tifjpg) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (dumptifcheck), TRUE);
-		gtk_entry_set_text(GTK_ENTRY (dump_entry), params->dumpname);
+		gtk_entry_set_text(GTK_ENTRY (dump_entry), context->config->dumpname);
 	}
 
 	dumpjpgcheck = gtk_radio_button_new_with_label(group,
@@ -1133,7 +1064,7 @@ void setupwindow(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxmostright), dumpjpgcheck, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (dumpjpgcheck), "toggled",
 			G_CALLBACK (toggle_checkdumpjpg), G_OBJECT (setupwin));
-	if (strlen(params->dumpname) > 0 && !params->tifjpg) {
+	if (strlen(context->config->dumpname) > 0 && !context->config->tifjpg) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (dumpjpgcheck), TRUE);
 	}
 
@@ -1151,35 +1082,35 @@ void setupwindow(struct GlobalParams *params) {
 			G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxmostright), dncheck, TRUE, TRUE, 0);
 
-	if (newparams.dumpnum)
+	if (setupConfig.dumpnum)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (dncheck), TRUE);
 	else
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (dtcheck), TRUE);
 
-	g_signal_connect(G_OBJECT (okeyb), "clicked", G_CALLBACK (okeypressed),
-			(gpointer) params);
-	gtk_box_pack_start(GTK_BOX (hbox3), okeyb, TRUE, TRUE, 0);
-	if (!params->StartedAlready)
-		gtk_widget_set_sensitive(okeyb, FALSE);
+	g_signal_connect(G_OBJECT (okButton), "clicked", G_CALLBACK (okeypressed),
+			(gpointer) context);
+	gtk_box_pack_start(GTK_BOX (hbox3), okButton, TRUE, TRUE, 0);
+	if (!context->StartedAlready)
+		gtk_widget_set_sensitive(okButton, FALSE);
 
-	cancelb = gtk_button_new_from_stock(GTK_STOCK_CANCEL);
-	g_signal_connect(G_OBJECT (cancelb), "clicked", G_CALLBACK (cancelpressed),
-			(gpointer) params);
-	gtk_box_pack_start(GTK_BOX (hbox3), cancelb, TRUE, TRUE, 0);
-	if (!params->StartedAlready)
-		gtk_widget_set_sensitive(cancelb, FALSE);
+	cancelButton = gtk_button_new_from_stock(GTK_STOCK_CANCEL);
+	g_signal_connect(G_OBJECT (cancelButton), "clicked", G_CALLBACK (cancelPressed),
+			(gpointer) context);
+	gtk_box_pack_start(GTK_BOX (hbox3), cancelButton, TRUE, TRUE, 0);
+	if (!context->StartedAlready)
+		gtk_widget_set_sensitive(cancelButton, FALSE);
 
-	redrawb = gtk_button_new_from_stock(GTK_STOCK_REFRESH);
-	g_signal_connect(G_OBJECT (redrawb), "clicked", G_CALLBACK (redrawpressed),
-			(gpointer) params);
-	gtk_box_pack_start(GTK_BOX (hbox3), redrawb, TRUE, TRUE, 0);
-	if (!params->StartedAlready)
-		gtk_widget_set_sensitive(redrawb, FALSE);
+	applyButton = gtk_button_new_from_stock(GTK_STOCK_APPLY);
+	g_signal_connect(G_OBJECT (applyButton), "clicked", G_CALLBACK (applyPressed),
+			(gpointer) context);
+	gtk_box_pack_start(GTK_BOX (hbox3), applyButton, TRUE, TRUE, 0);
+	if (!context->StartedAlready)
+		gtk_widget_set_sensitive(applyButton, FALSE);
 
-	quitb = gtk_button_new_from_stock(GTK_STOCK_QUIT);
-	g_signal_connect(G_OBJECT (quitb), "clicked", G_CALLBACK (quitpressed),
-			(gpointer) params);
-	gtk_box_pack_start(GTK_BOX (hbox3), quitb, TRUE, TRUE, 0);
+	quitButton = gtk_button_new_from_stock(GTK_STOCK_QUIT);
+	g_signal_connect(G_OBJECT (quitButton), "clicked", G_CALLBACK (quitPressed),
+			(gpointer) context);
+	gtk_box_pack_start(GTK_BOX (hbox3), quitButton, TRUE, TRUE, 0);
 
 	gtk_widget_show_all(setupwin);
 }

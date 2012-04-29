@@ -113,11 +113,17 @@ void printhelp() {
 /* This function handles the parameters given at the command line, and	*/
 /* sets the variables accordingly.					*/
 /************************************************************************/
-gboolean handleargs(int args, char **argv, struct GlobalParams *params) {
+struct Configuration * handleArgs(int args, char **argv) {
 	gint argl = 0, inttmp, control;
 	gchar c[64];
 	double tmp;
 	gboolean setxcol, setycol, setzcol, settcol, setfile;
+	struct Configuration *config;
+
+	config = getNewConfiguration();
+	if (config == NULL) {
+		return NULL;
+	}
 
 	setxcol = FALSE;
 	setycol = FALSE;
@@ -130,98 +136,98 @@ gboolean handleargs(int args, char **argv, struct GlobalParams *params) {
 		c[strlen(argv[argl + 1])] = '\0';
 
 		if (!strcmp(c, "s") && !setxcol && !setycol && !setzcol && !settcol) {
-			control = sscanf(argv[argl + 2], "%d", &(params->absxsize));
+			control = sscanf(argv[argl + 2], "%d", &(config->absxsize));
 			if (control == 0) {
 				printf("First parameter is invalid or missing for option: s\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			control = sscanf(argv[argl + 3], "%d", &(params->absysize));
+			control = sscanf(argv[argl + 3], "%d", &(config->absysize));
 			if (control == 0) {
 				printf(
 						"Second parameter is invalid or missing for option: s\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->absxsize < 100 || params->absysize < 100) {
+			if (config->absxsize < 100 || config->absysize < 100) {
 				printf("The window should be at least 100*100 pixels.\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 3;
 		} else if (!strcmp(c, "x") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%lf", &(params->xmin));
+			control = sscanf(argv[argl + 2], "%lf", &(config->xmin));
 			if (control == 0) {
 				printf("First parameter is invalid or missing for option: x\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			control = sscanf(argv[argl + 3], "%lf", &(params->xmax));
+			control = sscanf(argv[argl + 3], "%lf", &(config->xmax));
 			if (control == 0) {
 				printf(
 						"Second parameter is invalid or missing for option: x\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->xmin >= params->xmax) {
+			if (config->xmin >= config->xmax) {
 				printf("xmin must be smaller than xmax!\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 3;
 		} else if (!strcmp(c, "y") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%lf", &(params->ymin));
+			control = sscanf(argv[argl + 2], "%lf", &(config->ymin));
 			if (control == 0) {
 				printf("First parameter is invalid or missing for option: y\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			control = sscanf(argv[argl + 3], "%lf", &(params->ymax));
+			control = sscanf(argv[argl + 3], "%lf", &(config->ymax));
 			if (control == 0) {
 				printf(
 						"Second parameter is invalid or missing for option: y\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->ymin >= params->ymax) {
+			if (config->ymin >= config->ymax) {
 				printf("ymin must be smaller than ymax!\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 3;
 		} else if (!strcmp(c, "z") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%lf", &(params->zmin));
+			control = sscanf(argv[argl + 2], "%lf", &(config->zmin));
 			if (control == 0) {
 				printf("First parameter is invalid or missing for option: z\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			control = sscanf(argv[argl + 3], "%lf", &(params->zmax));
+			control = sscanf(argv[argl + 3], "%lf", &(config->zmax));
 			if (control == 0) {
 				printf(
 						"Second parameter is invalid for or missing option: z\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->zmin >= params->zmax) {
+			if (config->zmin >= config->zmax) {
 				printf("zmin must be smaller than zmax!\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 3;
 		} else if (!strcmp(c, "cube") && !setxcol && !setycol && !setzcol
@@ -231,106 +237,106 @@ gboolean handleargs(int args, char **argv, struct GlobalParams *params) {
 				printf("Invalid or missing parameter for option: cube\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			if (tmp <= 0.0) {
 				printf("cube value must be larger than 0.0!\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->xmin == 65535.0) {
-				params->xmin = -tmp;
-				params->xmax = tmp;
+			if (config->xmin == 65535.0) {
+				config->xmin = -tmp;
+				config->xmax = tmp;
 			}
-			if (params->ymin == 65535.0) {
-				params->ymin = -tmp;
-				params->ymax = tmp;
+			if (config->ymin == 65535.0) {
+				config->ymin = -tmp;
+				config->ymax = tmp;
 			}
-			if (params->zmin == 65535.0) {
-				params->zmin = -tmp;
-				params->zmax = tmp;
+			if (config->zmin == 65535.0) {
+				config->zmin = -tmp;
+				config->zmax = tmp;
 			}
 			argl += 2;
 		} else if (!strcmp(c, "timedel") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%s", params->timedelim);
+			control = sscanf(argv[argl + 2], "%s", config->timedelim);
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: timedel\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 2;
 		} else if (!strcmp(c, "erase") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->erase = TRUE;
+			config->erase = TRUE;
 			argl++;
 		} else if (!strcmp(c, "w") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->whitebg = TRUE;
+			config->whitebg = TRUE;
 			argl++;
 		} else if (!strcmp(c, "colorinv") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->colorset = 1;
+			config->colorset = 1;
 			argl++;
 		} else if (!strcmp(c, "coldcolors") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->colorset = 2;
+			config->colorset = 2;
 			argl++;
 		} else if (!strcmp(c, "coldcolors2") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->colorset = 3;
+			config->colorset = 3;
 			argl++;
 		} else if (!strcmp(c, "greyscale") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->colorset = 4;
+			config->colorset = 4;
 			argl++;
 		} else if (!strcmp(c, "sort") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->sort = 1;
+			config->sort = 1;
 			argl++;
 		} else if (!strcmp(c, "sortr") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->sort = 2;
+			config->sort = 2;
 			argl++;
 		} else if (!strcmp(c, "xyz") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->fxyz = TRUE;
+			config->fxyz = TRUE;
 			argl++;
 		} else if (!strcmp(c, "dumpnum") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->dumpnum = TRUE;
+			config->dumpnum = TRUE;
 			argl++;
 		} else if (!strcmp(c, "m") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%d", &(params->mode));
+			control = sscanf(argv[argl + 2], "%d", &(config->mode));
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: m\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->mode > 2 || params->mode < 0) {
-				printf("Unknown drawingmode : %d\n", params->mode);
+			if (config->mode > 2 || config->mode < 0) {
+				printf("Unknown drawingmode : %d\n", config->mode);
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 2;
 		} else if (!strcmp(c, "d") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%d", &(params->radius));
+			control = sscanf(argv[argl + 2], "%d", &(config->radius));
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: d\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->radius < 2)
-				params->radius = 2;
-			if (params->radius > 25)
-				params->radius = 25;
+			if (config->radius < 2)
+				config->radius = 2;
+			if (config->radius > 25)
+				config->radius = 25;
 			argl += 2;
 		} else if (!strcmp(c, "sleep") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
@@ -339,111 +345,111 @@ gboolean handleargs(int args, char **argv, struct GlobalParams *params) {
 				printf("Invalid or missing parameter for option: sleep\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 2;
-			params->interval = (gint) 1000 * tmp;
+			config->interval = (gint) 1000 * tmp;
 //	    if (params->interval < 0) params->interval = 0;
 		} else if (!strcmp(c, "v") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%d", &(params->vary));
+			control = sscanf(argv[argl + 2], "%d", &(config->vary));
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: v\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->vary > 2 || params->vary < 1) {
+			if (config->vary > 2 || config->vary < 1) {
 				printf("Vary has only two valid modes: 1 or 2 !\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			argl += 2;
 		} else if (!strcmp(c, "f") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%d", &(params->scol));
+			control = sscanf(argv[argl + 2], "%d", &(config->scol));
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: f\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			if (params->scol < 1) {
+			if (config->scol < 1) {
 				printf("Column must be greater than zero!\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			sscanf(argv[argl + 3], "%s", params->fstring);
+			sscanf(argv[argl + 3], "%s", config->fstring);
 			argl += 3;
 		} else if (!strcmp(c, "pngdump") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%s", params->dumpname);
+			control = sscanf(argv[argl + 2], "%s", config->dumpname);
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: tifdump\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			params->tifjpg = TRUE;
+			config->tifjpg = TRUE;
 			argl += 2;
 		} else if (!strcmp(c, "jpgdump") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			control = sscanf(argv[argl + 2], "%s", params->dumpname);
+			control = sscanf(argv[argl + 2], "%s", config->dumpname);
 			if (control == 0) {
 				printf("Invalid or missing parameter for option: jpgdump\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
-			params->tifjpg = FALSE;
+			config->tifjpg = FALSE;
 			argl += 2;
 		} else if (!strcmp(c, "usetypes") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->usetypes = TRUE;
+			config->usetypes = TRUE;
 			argl++;
 		} else if (!strcmp(c, "bsleep") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->mbsleep = TRUE;
+			config->mbsleep = TRUE;
 			argl++;
 		} else if (!strcmp(c, "help") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
 			printhelp();
-			return FALSE;
+			return NULL;
 		} else if (!strcmp(c, "once") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			params->once = TRUE;
+			config->once = TRUE;
 			argl++;
 		} else if (!strcmp(c, "rotate") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			sscanf(argv[argl + 2], "%lf", &params->iangle);
-			sscanf(argv[argl + 3], "%lf", &params->jangle);
-			sscanf(argv[argl + 4], "%lf", &params->kangle);
+			sscanf(argv[argl + 2], "%lf", &config->initIangle);
+			sscanf(argv[argl + 3], "%lf", &config->initJangle);
+			sscanf(argv[argl + 4], "%lf", &config->initKangle);
 			argl += 4;
 		} else if (sscanf(c, "%d", &inttmp) > 0
 				&& (!setxcol || !setycol || !setzcol || !settcol)) {
 			if (!setxcol) {
-				params->xcolumn = inttmp;
+				config->xcolumn = inttmp;
 				setxcol = TRUE;
 			} else if (!setycol) {
-				params->ycolumn = inttmp;
+				config->ycolumn = inttmp;
 				setycol = TRUE;
 			} else if (!setzcol) {
-				params->zcolumn = inttmp;
+				config->zcolumn = inttmp;
 				setzcol = TRUE;
 			} else if (!settcol) {
-				params->tcolumn = inttmp;
+				config->tcolumn = inttmp;
 				settcol = TRUE;
 			}
 			argl++;
 		} else if (setxcol && setycol && setzcol && settcol) {
-			control = sscanf(c, "%s", params->file);
+			control = sscanf(c, "%s", config->file);
 			if (control == 0) {
 				printf("Invalid or missing filename for input\n");
 				printf(
 						"Use option 'help' for list of all valid command line parameters\n");
-				return FALSE;
+				return NULL;
 			}
 			setfile = TRUE;
 			argl += 1;
@@ -453,18 +459,18 @@ gboolean handleargs(int args, char **argv, struct GlobalParams *params) {
 			printf("Please check your command line arguments.\n");
 			printf(
 					"Use option 'help' for list of all valid command line parameters\n");
-			return FALSE;
+			return NULL;
 		}
 	}
 
-	if (!params->fxyz)
-		params->usetypes = FALSE;
+	if (!config->fxyz)
+		config->usetypes = FALSE;
 	if (setxcol && setycol && setzcol && settcol && setfile)
-		return TRUE;
+		return config;
 	else {
 		printf(
 				"You at least have to specify input data columns and input file if\n");
 		printf("you're going to start gdpc from the commandline.\n\n");
 	}
-	return FALSE;
+	return NULL;
 }

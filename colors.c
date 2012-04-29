@@ -127,22 +127,22 @@ Authors email : jonas.frantz@helsinki.fi
                {157*256,  0*256, 80*256},
                {157*256,  0*256,120*256} };
 
-void setColorset(struct GlobalParams *params, gint colorsetnum) {
-	gint i,j;
+void setColorset(struct Configuration *config) {
+	gint i, j;
 
-	for (i=0;i<17;i++) {
-		for (j=0;j<3;j++) {
-		    if (colorsetnum==1) {
-		    	params->xcolorset[i][j] =  xcolorinv[i][j]/65535.0;
-		    } else if (colorsetnum==2) {
-		    	params->xcolorset[i][j] =  xcoldcolor[i][j]/65535.0;
-		    } else if (colorsetnum==3) {
-		    	params->xcolorset[i][j] =  xcoldcolor2[i][j]/65535.0;
-		    } else if (colorsetnum==4) {
-		    	params->xcolorset[i][j] =  xcoldcolor[i][j]/65535.0;
-		    } else {
-		    	params->xcolorset[i][j] =  xcolor[i][j]/65535.0;
-		    }
+	for (i = 0; i < 17; i++) {
+		for (j = 0; j < 3; j++) {
+			if (config->colorset == 1) {
+				config->xcolorset[i][j] = xcolorinv[i][j] / 65535.0;
+			} else if (config->colorset == 2) {
+				config->xcolorset[i][j] = xcoldcolor[i][j] / 65535.0;
+			} else if (config->colorset == 3) {
+				config->xcolorset[i][j] = xcoldcolor2[i][j] / 65535.0;
+			} else if (config->colorset == 4) {
+				config->xcolorset[i][j] = xcoldcolor[i][j] / 65535.0;
+			} else {
+				config->xcolorset[i][j] = xcolor[i][j] / 65535.0;
+			}
 		}
 	}
 }

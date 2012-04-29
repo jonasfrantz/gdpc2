@@ -37,7 +37,7 @@ gint lastframedone = 0;
 /* Reads the input file and processes it, then it calls rotateatoms to	*/
 /* rotate the coordinates and draw them.								*/
 /************************************************************************/
-void * readInput(struct GlobalParams *params) {
+void * readInput(struct Context *context) {
 	gchar buf[160];
 	gchar arg[20][64];
 	gchar timestr[64] = "0.0\0";
@@ -49,8 +49,8 @@ void * readInput(struct GlobalParams *params) {
 
 	gboolean timecheck, endframe, framecheck, typescheck;
 
-	struct xyzstruc *coords;
-	struct xyzstruc lastframe;
+	struct Atom *coords;
+	struct Atom lastframe;
 
 	FILE *fpRI;
 
@@ -61,8 +61,8 @@ void * readInput(struct GlobalParams *params) {
 	framecheck = FALSE;
 
 	while (1) {
-		g_mutex_lock(params->atEnd);
-		g_mutex_lock(params->framedata[NumFrameRI].framecomplete);
+		g_mutex_lock(context->atEnd);
+		g_mutex_lock(context->framedata[NumFrameRI].framecomplete);
 
 #if Debug
 		printf("Reading frame : %d\n",NumFrameRI);
@@ -78,18 +78,18 @@ void * readInput(struct GlobalParams *params) {
 		maxz = 0.0;
 
 		if (NewFP != NULL) {
-			g_mutex_lock(params->filewait);
-			params->fp = NewFP;
+			g_mutex_lock(context->filewait);
+			context->fp = NewFP;
 			NewFP = NULL;
 			fclose(fpRI);
 		}
-		fpRI = params->fp;
+		fpRI = context->fp;
 
 		/* If file is in xyz format start reading here ! */
 
-		if (params->fxyz) {
+		if (context->config->fxyz) {
 			if (fgets(buf, 160, fpRI) == NULL) {
-				params->framedata[previousFrameNum].lastFrame = TRUE;
+				context->framedata[previousFrameNum].lastFrame = TRUE;
 //				printf("RI: At end %5.3f\n", params->framedata[previousFrameNum].atime);
 				NumFrameRI++;
 				if (NumFrameRI == NUMFRAMES)
@@ -97,8 +97,8 @@ void * readInput(struct GlobalParams *params) {
 				lastframedone = 1;
 				continue;
 			} else
-				g_mutex_unlock(params->atEnd);
-				params->framedata[NumFrameRI].lastFrame = FALSE;
+				g_mutex_unlock(context->atEnd);
+				context->framedata[NumFrameRI].lastFrame = FALSE;
 
 			n = sscanf(buf, "%d", &nreadxyz);
 			if (n != 1) {
@@ -118,32 +118,32 @@ void * readInput(struct GlobalParams *params) {
 					arg[17], arg[18], arg[19]);
 			timecheck = FALSE;
 			for (i = 1; i < n; i++) {
-				if (strcmp(arg[i], params->timedelim) == 0) {
+				if (strcmp(arg[i], context->config->timedelim) == 0) {
 					strcpy((char *) timestr, (char *) arg[i - 1]);
 					timecheck = TRUE;
 				}
 			}
 			if (timecheck)
-				n = sscanf(timestr, "%lf", &params->framedata[NumFrameRI].atime);
+				n = sscanf(timestr, "%lf", &context->framedata[NumFrameRI].atime);
 			else {
 				printf("Warning : Missing time variable\n");
-				params->framedata[NumFrameRI].atime = -1;
+				context->framedata[NumFrameRI].atime = -1;
 			}
 			if (n == 0) {
 				printf("Warning : Invalid time variable : %s\n", timestr);
-				params->framedata[NumFrameRI].atime = -1;
+				context->framedata[NumFrameRI].atime = -1;
 			}
 
-			coords = (struct xyzstruc *) g_malloc(
-					nreadxyz * sizeof(struct xyzstruc));
+			coords = (struct Atom *) g_malloc(
+					nreadxyz * sizeof(struct Atom));
 			if (coords == NULL) {
 				printf("Out of memory!\nTry reducing number of frames used.\n");
 				gtk_main_quit();
 			}
-			params->framedata[NumFrameRI].numAtoms = nreadxyz;
-			if (params->framedata[NumFrameRI].atomdata != NULL)
-				g_free(params->framedata[NumFrameRI].atomdata);
-			params->framedata[NumFrameRI].atomdata = coords;
+			context->framedata[NumFrameRI].numAtoms = nreadxyz;
+			if (context->framedata[NumFrameRI].atomdata != NULL)
+				g_free(context->framedata[NumFrameRI].atomdata);
+			context->framedata[NumFrameRI].atomdata = coords;
 			endframe = FALSE;
 			numatoms = 0;
 			numtypes = 0;
@@ -156,12 +156,12 @@ void * readInput(struct GlobalParams *params) {
 						arg[4], arg[5], arg[6], arg[7], arg[8], arg[9], arg[10],
 						arg[11], arg[12], arg[13], arg[14], arg[15], arg[16],
 						arg[17], arg[18], arg[19]);
-				if (params->scol > 0) {
-					if (strcmp(params->fstring, arg[params->scol - 1]))
+				if (context->config->scol > 0) {
+					if (strcmp(context->config->fstring, arg[context->config->scol - 1]))
 						continue;
 				}
-				if (n < params->xcolumn || n < params->ycolumn
-						|| n < params->zcolumn || n < params->tcolumn) {
+				if (n < context->config->xcolumn || n < context->config->ycolumn
+						|| n < context->config->zcolumn || n < context->config->tcolumn) {
 					printf("Error in xyz input file : %s\nExiting.\n", buf);
 					gtk_main_quit();
 				}
@@ -183,23 +183,23 @@ void * readInput(struct GlobalParams *params) {
 					}
 				} else
 					coords[numatoms].atype = j;
-				n = sscanf(arg[params->xcolumn - 1], "%lf",
+				n = sscanf(arg[context->config->xcolumn - 1], "%lf",
 						&coords[numatoms].xcoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->xcolumn - 1]);
+							" to a number.\n", arg[context->config->xcolumn - 1]);
 
-				n = sscanf(arg[params->ycolumn - 1], "%lf",
+				n = sscanf(arg[context->config->ycolumn - 1], "%lf",
 						&coords[numatoms].ycoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->ycolumn - 1]);
+							" to a number.\n", arg[context->config->ycolumn - 1]);
 
-				n = sscanf(arg[params->zcolumn - 1], "%lf",
+				n = sscanf(arg[context->config->zcolumn - 1], "%lf",
 						&coords[numatoms].zcoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->zcolumn - 1]);
+							" to a number.\n", arg[context->config->zcolumn - 1]);
 
 				if (coords[numatoms].xcoord > maxx)
 					maxx = coords[numatoms].xcoord;
@@ -220,30 +220,30 @@ void * readInput(struct GlobalParams *params) {
 					break;
 				}
 			}
-			if (params->xmin == 65535.0) {
-				params->framedata[NumFrameRI].xmax = maxx;
-				params->framedata[NumFrameRI].xmin = minx;
+			if (context->config->xmin == 65535.0) {
+				context->framedata[NumFrameRI].xmax = maxx;
+				context->framedata[NumFrameRI].xmin = minx;
 			} else {
-				params->framedata[NumFrameRI].xmax = params->xmax;
-				params->framedata[NumFrameRI].xmin = params->xmin;
+				context->framedata[NumFrameRI].xmax = context->config->xmax;
+				context->framedata[NumFrameRI].xmin = context->config->xmin;
 			}
-			if (params->ymin == 65535.0) {
-				params->framedata[NumFrameRI].ymax = maxy;
-				params->framedata[NumFrameRI].ymin = miny;
+			if (context->config->ymin == 65535.0) {
+				context->framedata[NumFrameRI].ymax = maxy;
+				context->framedata[NumFrameRI].ymin = miny;
 			} else {
-				params->framedata[NumFrameRI].ymax = params->ymax;
-				params->framedata[NumFrameRI].ymin = params->ymin;
+				context->framedata[NumFrameRI].ymax = context->config->ymax;
+				context->framedata[NumFrameRI].ymin = context->config->ymin;
 			}
-			if (params->zmin == 65535.0) {
-				params->framedata[NumFrameRI].zmax = maxz;
-				params->framedata[NumFrameRI].zmin = minz;
+			if (context->config->zmin == 65535.0) {
+				context->framedata[NumFrameRI].zmax = maxz;
+				context->framedata[NumFrameRI].zmin = minz;
 			} else {
-				params->framedata[NumFrameRI].zmax = params->zmax;
-				params->framedata[NumFrameRI].zmin = params->zmin;
+				context->framedata[NumFrameRI].zmax = context->config->zmax;
+				context->framedata[NumFrameRI].zmin = context->config->zmin;
 			}
 
-			params->numtypes = numtypes;
-			g_mutex_unlock(params->framedata[NumFrameRI].frameready);
+			context->config->numtypes = numtypes;
+			g_mutex_unlock(context->framedata[NumFrameRI].frameready);
 
 			previousFrameNum = NumFrameRI;
 			NumFrameRI++;
@@ -260,8 +260,8 @@ void * readInput(struct GlobalParams *params) {
 		else {
 			numalloc = ALLOCTHIS;
 			i = 0;
-			coords = (struct xyzstruc *) g_malloc(
-					numalloc * sizeof(struct xyzstruc));
+			coords = (struct Atom *) g_malloc(
+					numalloc * sizeof(struct Atom));
 			if (coords == NULL) {
 				printf("Out of memory!\nTry reducing number of frames used.\n");
 				gtk_main_quit();
@@ -275,12 +275,12 @@ void * readInput(struct GlobalParams *params) {
 			}
 			framecheck = TRUE;
 			endframe = TRUE;
-			params->framedata[NumFrameRI].lastFrame = TRUE;
+			context->framedata[NumFrameRI].lastFrame = TRUE;
 			while (fgets(buf, 160, fpRI) != NULL) {
 				if (i + 1 == numalloc) {
 					numalloc += ALLOCTHIS;
 					coords = g_realloc(coords,
-							numalloc * sizeof(struct xyzstruc));
+							numalloc * sizeof(struct Atom));
 					if (coords == NULL) {
 						printf(
 								"Out of memory!\nTry reducing number of frames used.\n");
@@ -292,33 +292,33 @@ void * readInput(struct GlobalParams *params) {
 						arg[4], arg[5], arg[6], arg[7], arg[8], arg[9], arg[10],
 						arg[11], arg[12], arg[13], arg[14], arg[15], arg[16],
 						arg[17], arg[18], arg[19]);
-				if (params->scol > 0) {
-					if (strcmp(params->fstring, arg[params->scol - 1]))
+				if (context->config->scol > 0) {
+					if (strcmp(context->config->fstring, arg[context->config->scol - 1]))
 						continue;
 				}
-				if (n < params->xcolumn || n < params->ycolumn
-						|| n < params->zcolumn || n < params->tcolumn) {
+				if (n < context->config->xcolumn || n < context->config->ycolumn
+						|| n < context->config->zcolumn || n < context->config->tcolumn) {
 					printf(
 							"Error in input file : %s\nAre you sure the input file isn't in xyz "
 									"format ?\nExiting.\n", buf);
 					gtk_main_quit();
 				}
-				n = sscanf(arg[params->xcolumn - 1], "%lf", &coords[i].xcoord);
+				n = sscanf(arg[context->config->xcolumn - 1], "%lf", &coords[i].xcoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->xcolumn - 1]);
-				n = sscanf(arg[params->ycolumn - 1], "%lf", &coords[i].ycoord);
+							" to a number.\n", arg[context->config->xcolumn - 1]);
+				n = sscanf(arg[context->config->ycolumn - 1], "%lf", &coords[i].ycoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->ycolumn - 1]);
-				n = sscanf(arg[params->zcolumn - 1], "%lf", &coords[i].zcoord);
+							" to a number.\n", arg[context->config->ycolumn - 1]);
+				n = sscanf(arg[context->config->zcolumn - 1], "%lf", &coords[i].zcoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->zcolumn - 1]);
-				n = sscanf(arg[params->tcolumn - 1], "%lf", &coords[i].tcoord);
+							" to a number.\n", arg[context->config->zcolumn - 1]);
+				n = sscanf(arg[context->config->tcolumn - 1], "%lf", &coords[i].tcoord);
 				if (n == 0)
 					printf("There seems to be a problem with converting \'%s\'"
-							" to a number.\n", arg[params->tcolumn - 1]);
+							" to a number.\n", arg[context->config->tcolumn - 1]);
 				if (coords[i].tcoord == coords[0].tcoord) {
 					if (coords[i].xcoord > maxx)
 						maxx = coords[i].xcoord;
@@ -335,47 +335,47 @@ void * readInput(struct GlobalParams *params) {
 					i++;
 				} else {
 					endframe = FALSE;
-					params->framedata[NumFrameRI].lastFrame = FALSE;
+					context->framedata[NumFrameRI].lastFrame = FALSE;
 					break;
 				}
 			}
-			params->framedata[NumFrameRI].atime = coords[i - 1].tcoord;
+			context->framedata[NumFrameRI].atime = coords[i - 1].tcoord;
 			lastframe.xcoord = coords[i].xcoord;
 			lastframe.ycoord = coords[i].ycoord;
 			lastframe.zcoord = coords[i].zcoord;
 			lastframe.tcoord = coords[i].tcoord;
-			if (params->xmin == 65535.0) {
-				params->framedata[NumFrameRI].xmax = maxx;
-				params->framedata[NumFrameRI].xmin = minx;
+			if (context->config->xmin == 65535.0) {
+				context->framedata[NumFrameRI].xmax = maxx;
+				context->framedata[NumFrameRI].xmin = minx;
 			} else {
-				params->framedata[NumFrameRI].xmax = params->xmax;
-				params->framedata[NumFrameRI].xmin = params->xmin;
+				context->framedata[NumFrameRI].xmax = context->config->xmax;
+				context->framedata[NumFrameRI].xmin = context->config->xmin;
 			}
-			if (params->ymin == 65535.0) {
-				params->framedata[NumFrameRI].ymax = maxy;
-				params->framedata[NumFrameRI].ymin = miny;
+			if (context->config->ymin == 65535.0) {
+				context->framedata[NumFrameRI].ymax = maxy;
+				context->framedata[NumFrameRI].ymin = miny;
 			} else {
-				params->framedata[NumFrameRI].ymax = params->ymax;
-				params->framedata[NumFrameRI].ymin = params->ymin;
+				context->framedata[NumFrameRI].ymax = context->config->ymax;
+				context->framedata[NumFrameRI].ymin = context->config->ymin;
 			}
-			if (params->zmin == 65535.0) {
-				params->framedata[NumFrameRI].zmax = maxz;
-				params->framedata[NumFrameRI].zmin = minz;
+			if (context->config->zmin == 65535.0) {
+				context->framedata[NumFrameRI].zmax = maxz;
+				context->framedata[NumFrameRI].zmin = minz;
 			} else {
-				params->framedata[NumFrameRI].zmax = params->zmax;
-				params->framedata[NumFrameRI].zmin = params->zmin;
+				context->framedata[NumFrameRI].zmax = context->config->zmax;
+				context->framedata[NumFrameRI].zmin = context->config->zmin;
 			}
 
-			params->framedata[NumFrameRI].numAtoms = i;
-			if (params->framedata[NumFrameRI].atomdata != NULL)
-				g_free(params->framedata[NumFrameRI].atomdata);
-			params->framedata[NumFrameRI].atomdata = coords;
-			g_mutex_unlock(params->framedata[NumFrameRI].frameready);
+			context->framedata[NumFrameRI].numAtoms = i;
+			if (context->framedata[NumFrameRI].atomdata != NULL)
+				g_free(context->framedata[NumFrameRI].atomdata);
+			context->framedata[NumFrameRI].atomdata = coords;
+			g_mutex_unlock(context->framedata[NumFrameRI].frameready);
 
 			if (endframe) {
 				framecheck = FALSE;
 			} else {
-				g_mutex_unlock(params->atEnd);
+				g_mutex_unlock(context->atEnd);
 			}
 
 			NumFrameRI++;

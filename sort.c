@@ -32,7 +32,7 @@ Authors email : jonas.frantz@helsinki.fi
 /************************************************************************/
 /* This function is used to swap to atoms with each other.		*/
 /************************************************************************/
-void swap3(struct xyzstruc *coords, gint i, gint j) 
+void swap3(struct Atom *coords, gint i, gint j) 
 {
 double tmp;
 gint tmp2;
@@ -62,7 +62,7 @@ gint tmp2;
 /************************************************************************/
 /* This function is used to compare two atoms coordinates to each other.*/
 /************************************************************************/
-gint compare3(struct xyzstruc *coords,gint i,gint j)
+gint compare3(struct Atom *coords,gint i,gint j)
 {
     if (coords[i].zcoord < coords[j].zcoord) return (-1);
     else if (coords[i].zcoord > coords[j].zcoord) return (1);
@@ -83,7 +83,7 @@ gint compare3(struct xyzstruc *coords,gint i,gint j)
 /* 2nd ed. page 120. Some sort of quicksort.				*/
 /* It is used to sort the atoms by x,y and z coordinates.		*/
 /************************************************************************/
-void sortatoms(struct xyzstruc *coords, gint left, gint right, gboolean sort) 
+void sortatoms(struct Atom *coords, gint left, gint right, gboolean sort) 
 {
 gint i,last;
 

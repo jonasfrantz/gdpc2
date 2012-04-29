@@ -47,11 +47,8 @@ gboolean MB_pressed;
 gint retcode; /* Return value from create_thread command */
 GThread *th_a; /* Thread structure */
 
-struct DrawStruct DrawData; /* Universal structure drawing variables */
-
 extern gint NumFrameRI; /* Contains which frame is about to be
  read from the input data */
-extern double FrameTime; /* Contains time of frame just shown */
 extern FILE *NewFP; /* Filepointer to new file if one has
  been chosen, otherwise = NULL */
 
@@ -65,21 +62,21 @@ void quit(GtkWidget *widget, gpointer data) {
 /************************************************************************/
 /* This function is called when the pause button is pressed.		*/
 /************************************************************************/
-void pauseButtonPressed(GtkToggleButton *widget, struct GlobalParams *params) {
+void pauseButtonPressed(GtkToggleButton *widget, struct Context *context) {
 #if Debug 
 	if (gtk_toggle_button_get_active(widget))
 	printf("Setting animation on pause.\n");
 	else printf("Unpausing animation.\n");
 #endif
 
-	params->pausecheck = gtk_toggle_button_get_active(widget);
+	context->pausecheck = gtk_toggle_button_get_active(widget);
 }
 
 /************************************************************************/
 /* This function is called when the restart button is pressed.   	*/
 /* It simply resets the filepointer and clears the drawingboard. 	*/
 /************************************************************************/
-void restartAnimation(GtkWidget *widget, struct GlobalParams *params) {
+void restartAnimation(GtkWidget *widget, struct Context *context) {
 	gint i;
 
 #if Debug
@@ -88,67 +85,57 @@ void restartAnimation(GtkWidget *widget, struct GlobalParams *params) {
 #endif
 
 	for (i = NUMFRAMES - 1; i >= 0; i--) {
-		g_mutex_trylock(params->framedata[i].framecomplete);
-		g_mutex_lock(params->framedata[i].framedrawn);
-		params->framedata[i].lastFrame = FALSE;
+		g_mutex_trylock(context->framedata[i].framecomplete);
+		g_mutex_lock(context->framedata[i].framedrawn);
+		context->framedata[i].lastFrame = FALSE;
 	}
 
 #if Debug
 	printf("Opening new file.\n");
 #endif
 
-	NewFP = fopen(params->file, "r");
+	NewFP = fopen(context->config->file, "r");
 	if (NewFP == NULL) {
-		printf("Error opening file: %s\n", params->file);
+		printf("Error opening file: %s\n", context->config->file);
 		gtk_main_quit();
 	}
 	fseek(NewFP, SEEK_SET, 0);
-	g_mutex_unlock(params->atEnd);
-	params->numframe = 1;
+	g_mutex_unlock(context->atEnd);
+//	context->config->numframe = 1;
 
 #if Debug
 	printf("Reinitialize filewait/frameready/framedrawn semaphores.\n");
 #endif
 
-	g_mutex_unlock(params->filewait);
+	g_mutex_unlock(context->filewait);
 
 	for (i = NUMFRAMES - 1; i >= 0; i--) {
-		g_mutex_trylock(params->framedata[i].frameready);
+		g_mutex_trylock(context->framedata[i].frameready);
 	}
 
-	DrawData.nextFrameNum = NumFrameRI;
+	context->nextFrameNum = NumFrameRI;
 
 	for (i = 0; i < NUMFRAMES; i++) {
-		g_mutex_unlock(params->framedata[i].framecomplete);
-		g_mutex_unlock(params->framedata[i].framedrawn);
+		g_mutex_unlock(context->framedata[i].framecomplete);
+		g_mutex_unlock(context->framedata[i].framedrawn);
 	}
 
-	DrawData.currentFrame = NULL;
+	context->currentFrame = NULL;
 }
 
 /************************************************************************/
 /* This function is called when the setup button is pressed.		*/
 /* It stops the animation and calls the setupwindow function.		*/
 /************************************************************************/
-void setupButtonPressed(GtkWidget *widget, struct GlobalParams *params) {
-#if Debug
-	printf("Starting setup window.\n");
-#endif
-
-	params->setupstop = TRUE;
-	params->oldxc = params->xcolumn;
-	params->oldyc = params->ycolumn;
-	params->oldzc = params->zcolumn;
-	params->oldtc = params->tcolumn;
-	params->oldxsize = params->absxsize;
-	params->oldysize = params->absysize;
-	setupwindow(params);
+void setupButtonPressed(GtkWidget *widget, struct Context *context) {
+	context->setupstop = TRUE;
+	showSetupWindow(context);
 }
 
 /************************************************************************/
 /************************************************************************/
 gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
-		struct GlobalParams *params) {
+		struct Context *context) {
 	guint width, height;
 	cairo_t *first_cr;
 	cairo_surface_t *first;
@@ -157,19 +144,19 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 	width = gtk_widget_get_allocated_width(widget);
 	height = gtk_widget_get_allocated_height(widget);
 
-	if (DrawData.currentFrame != NULL) {
-		if (g_mutex_trylock((DrawData.currentFrame)->framedrawn) == TRUE) {
+	if (context->currentFrame != NULL) {
+		if (g_mutex_trylock((context->currentFrame)->framedrawn) == TRUE) {
 			first = cairo_surface_create_similar(cairo_get_target(cr),
 					CAIRO_CONTENT_COLOR, width, height);
 
 			first_cr = cairo_create(first);
 
-			DrawData.cr = first_cr;
-			DrawData.crXSize = width;
-			DrawData.crYSize = height;
+			context->cr = first_cr;
+			context->crXSize = width;
+			context->crYSize = height;
 
-			clearDrawable(DrawData);
-			rotateAtoms(DrawData);
+			clearDrawable(context);
+			rotateAtoms(context);
 
 			cairo_set_source_surface(cr, first, 0, 0);
 			cairo_paint(cr);
@@ -179,22 +166,22 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 			cairo_destroy(first_cr);
 
 			sprintf(tstr, "X: %4.3f - %4.3f",
-					(DrawData.currentFrame)->xmin,
-					(DrawData.currentFrame)->xmax);
+					(context->currentFrame)->xmin,
+					(context->currentFrame)->xmax);
 			gtk_entry_set_text((GtkEntry *) maxx_entry, tstr);
 			sprintf(tstr, "Y: %4.3f - %4.3f",
-					(DrawData.currentFrame)->ymin,
-					(DrawData.currentFrame)->ymax);
+					(context->currentFrame)->ymin,
+					(context->currentFrame)->ymax);
 			gtk_entry_set_text((GtkEntry *) maxy_entry, tstr);
 			sprintf(tstr, "Z: %4.3f - %4.3f",
-					(DrawData.currentFrame)->zmin,
-					(DrawData.currentFrame)->zmax);
+					(context->currentFrame)->zmin,
+					(context->currentFrame)->zmax);
 			gtk_entry_set_text((GtkEntry *) maxz_entry, tstr);
 
-			sprintf(tstr, "Time: %5.3f fs", (DrawData.currentFrame)->atime);
+			sprintf(tstr, "Time: %5.3f fs", (context->currentFrame)->atime);
 			gtk_entry_set_text((GtkEntry *) time_entry, tstr);
 
-			g_mutex_unlock((DrawData.currentFrame)->framedrawn);
+			g_mutex_unlock((context->currentFrame)->framedrawn);
 		}
 	}
 
@@ -230,7 +217,7 @@ gboolean keyPressEvent(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 /* position of the cursor.						*/
 /************************************************************************/
 gint buttonPressEvent(GtkWidget *widget, GdkEventButton *event,
-		struct GlobalParams *params) {
+		struct Context *params) {
 #if Debug
 	printf("Button pressed.\n");
 #endif
@@ -253,7 +240,7 @@ gint buttonPressEvent(GtkWidget *widget, GdkEventButton *event,
 /* rotates the atoms to their final position.				*/
 /************************************************************************/
 gint buttonReleaseEvent(GtkWidget *widget, GdkEventButton *event,
-		struct GlobalParams *params) {
+		struct Context *params) {
 #if Debug
 	printf("Button released.\n");
 #endif
@@ -276,7 +263,7 @@ gint buttonReleaseEvent(GtkWidget *widget, GdkEventButton *event,
 /* is pressed down.							*/
 /************************************************************************/
 gint motionNotifyEvent(GtkWidget *widget, GdkEventMotion *event,
-		struct GlobalParams *params) {
+		struct Context *context) {
 	gint x, y;
 	char xstr[64];
 	GdkModifierType state;
@@ -288,22 +275,22 @@ gint motionNotifyEvent(GtkWidget *widget, GdkEventMotion *event,
 
 	gdk_window_get_pointer(event->window, &x, &y, &state);
 
-	if (params->pressed) {
-		if (params->xpress - x > ROTATETRESHOLD
-				|| params->ypress - y > ROTATETRESHOLD
-				|| params->xpress - x < -ROTATETRESHOLD
-				|| params->ypress - y < -ROTATETRESHOLD) {
+	if (context->pressed) {
+		if (context->xpress - x > ROTATETRESHOLD
+				|| context->ypress - y > ROTATETRESHOLD
+				|| context->xpress - x < -ROTATETRESHOLD
+				|| context->ypress - y < -ROTATETRESHOLD) {
 #if Debug
 			printf("Starting rotating of scene.\n");
 #endif
-			mouserotate(widget, (params->xpress - x), (params->ypress - y),
-					params);
-			params->xpress = x;
-			params->ypress = y;
+			mouserotate(widget, (context->xpress - x), (context->ypress - y),
+					context);
+			context->xpress = x;
+			context->ypress = y;
 		}
 	}
 
-	NumFrame = DrawData.nextFrameNum;
+	NumFrame = context->nextFrameNum;
 	NumFrame--;
 	if (NumFrame < 0)
 		NumFrame += NUMFRAMES;
@@ -314,67 +301,99 @@ gint motionNotifyEvent(GtkWidget *widget, GdkEventMotion *event,
 	sprintf(
 			xstr,
 			"X: %5.3f   Y: %5.3f",
-			(((params->framedata[NumFrame].xmax
-					- params->framedata[NumFrame].xmin) * (x - xborder)
-					/ (double) params->absxsize)
-					+ params->framedata[NumFrame].xmin),
-			(((params->framedata[NumFrame].ymax
-					- params->framedata[NumFrame].ymin)
-					* (params->absysize - (y - yborder))
-					/ (double) params->absysize))
-					+ params->framedata[NumFrame].ymin);
+			(((context->framedata[NumFrame].xmax
+					- context->framedata[NumFrame].xmin) * (x - xborder)
+					/ (double) context->config->absxsize)
+					+ context->framedata[NumFrame].xmin),
+			(((context->framedata[NumFrame].ymax
+					- context->framedata[NumFrame].ymin)
+					* (context->config->absysize - (y - yborder))
+					/ (double) context->config->absysize))
+					+ context->framedata[NumFrame].ymin);
 	gtk_entry_set_text((GtkEntry *) coord_entry, xstr);
 
 	return TRUE;
 }
 
 /************************************************************************/
+/************************************************************************/
+void setContextConfig(struct Context *context, struct Configuration *newconfig) {
+	struct Configuration *oldconfig;
+
+	setColorset(newconfig);
+
+	oldconfig = context->config;
+	context->config = newconfig;
+	if (oldconfig != NULL) {
+		free(oldconfig);
+	}
+}
+
+
+/************************************************************************/
 /* This function is called at the end of setupwindow if the ok button 	*/
 /* was pressed, it reinitializes gdpc if necessary and then continous	*/
 /* the animation.							*/
 /************************************************************************/
-void setupStartOk(struct GlobalParams *params) {
-	if (params->absxsize != params->oldxsize
-			|| params->absysize != params->oldysize) {
-		gtk_widget_set_size_request(params->drawing_area,
-				params->absxsize + 2 * xborder, params->absysize + 2 * yborder);
+void setupStartOk(struct Context *context, struct Configuration *newconfig) {
+
+	if (context->config->absxsize != newconfig->absxsize
+			|| context->config->absysize != newconfig->absysize) {
+		gtk_widget_set_size_request(context->drawing_area,
+				newconfig->absxsize + 2 * xborder, newconfig->absysize + 2 * yborder);
 	}
 
-	setColorset(params, params->colorset);
-
-	if (params->xcolumn != params->oldxc || params->ycolumn != params->oldyc
-			|| params->zcolumn != params->oldzc
-			|| params->tcolumn != params->oldtc) {
-		fseek(params->fp, SEEK_SET, 0);
-		g_mutex_unlock(params->atEnd);
+	if (context->config->xcolumn != newconfig->xcolumn || context->config->ycolumn != newconfig->ycolumn
+			|| context->config->zcolumn != newconfig->zcolumn
+			|| context->config->tcolumn != newconfig->tcolumn) {
+		fseek(context->fp, SEEK_SET, 0);
+		g_mutex_unlock(context->atEnd);
 	}
-	if (strlen(params->file) > 0) {
-		fclose(params->fp);
-		params->fp = fopen(params->file, "r");
-		if (params->fp == NULL) {
-			printf("Error opening file: %s\n", params->file);
+	if (strlen(newconfig->file) > 0) {
+		fclose(context->fp);
+		context->fp = fopen(newconfig->file, "r");
+		if (context->fp == NULL) {
+			printf("Error opening file: %s\n", newconfig->file);
 			gtk_main_quit();
 		}
-		fseek(params->fp, 0, 0);
-		params->numframe = 1;
-		g_mutex_unlock(params->atEnd);
+		fseek(context->fp, 0, 0);
+		g_mutex_unlock(context->atEnd);
 	}
-	params->setupstop = FALSE;
+	setContextConfig(context, newconfig);
+
+	context->setupstop = FALSE;
 }
 
 /************************************************************************/
 /* This function is called at the end of setwindow if the cancel button */
 /* was pressed. It simply continous the animation.						*/
 /************************************************************************/
-void setupStartCancel(struct GlobalParams *params) {
-	params->setupstop = FALSE;
+void setupStartCancel(struct Context *context) {
+	context->setupstop = FALSE;
+}
+
+/************************************************************************/
+/* This function is called when the apply button is pressed in the 		*/
+/* setup window. It just redraws the frame.								*/
+/************************************************************************/
+void setupApplyNewConfig(struct Context *context, struct Configuration *newconfig) {
+
+	if (context->config->absxsize != newconfig->absxsize
+			|| context->config->absysize != newconfig->absysize) {
+		gtk_widget_set_size_request(context->drawing_area,
+				newconfig->absxsize + 2 * xborder, newconfig->absysize + 2 * yborder);
+	}
+
+	setContextConfig(context, newconfig);
+
+	triggerImageRedraw(NULL, context);
 }
 
 /************************************************************************/
 /* This function is called when there has been a change in angle from	*/
 /* pressing a button.													*/
 /************************************************************************/
-void triggerImageRedraw(GtkWidget *widget, struct GlobalParams *params) {
+void triggerImageRedraw(GtkWidget *widget, struct Context *params) {
 	gtk_widget_queue_draw(params->drawing_area);
 }
 
@@ -385,7 +404,7 @@ void triggerImageRedraw(GtkWidget *widget, struct GlobalParams *params) {
 /* the next frame. When drawatoms is done, if updates the time in the	*/
 /* timeentry and puts the pixmap onto the screen.			*/
 /************************************************************************/
-gboolean switchToNextFrame(struct GlobalParams *params) {
+gboolean switchToNextFrame(struct Context *context) {
 	char tstr[64];
 	char picname[128];
 	char pictype[16];
@@ -394,32 +413,32 @@ gboolean switchToNextFrame(struct GlobalParams *params) {
 	static long previous_usec = 0;
 	static long previous_sec = 0;
 	gboolean previousDrawn;
-	struct FrameData *previousFrame;
+	struct Frame *previousFrame;
 
 	gettimeofday(&tv, &tz);
 
 	if ((((double) tv.tv_sec - previous_sec) * 1000
 			+ ((double) tv.tv_usec - previous_usec) / 1000)
-			> ((double) params->interval)) {
+			> ((double) context->config->interval)) {
 		previous_usec = tv.tv_usec;
 		previous_sec = tv.tv_sec;
 
-		if (!params->pausecheck && !params->setupstop
-				&& (!params->mbsleep || MB_pressed)) {
+		if (!context->pausecheck && !context->setupstop
+				&& (!context->config->mbsleep || MB_pressed)) {
 			MB_pressed = FALSE;
 
-			if (params->once) {
-				if (DrawData.currentFrame != NULL) {
-					if ((DrawData.currentFrame)->lastFrame) {
+			if (context->config->once) {
+				if (context->currentFrame != NULL) {
+					if ((context->currentFrame)->lastFrame) {
 						gtk_main_quit();
 					}
 				}
 			}
 
 			previousDrawn = FALSE;
-			if (DrawData.currentFrame != NULL) {
-				if (!(DrawData.currentFrame)->lastFrame) {
-					if (g_mutex_trylock((DrawData.currentFrame)->framedrawn)
+			if (context->currentFrame != NULL) {
+				if (!(context->currentFrame)->lastFrame) {
+					if (g_mutex_trylock((context->currentFrame)->framedrawn)
 							== TRUE) {
 						previousDrawn = TRUE;
 					}
@@ -429,57 +448,57 @@ gboolean switchToNextFrame(struct GlobalParams *params) {
 
 			}
 
-			if (g_mutex_trylock(params->framedata[DrawData.nextFrameNum].frameready)
+			if (g_mutex_trylock(context->framedata[context->nextFrameNum].frameready)
 					== TRUE && previousDrawn) {
 
-				previousFrame = DrawData.currentFrame;
-				DrawData.currentFrame = &(params->framedata[DrawData.nextFrameNum]);
+				previousFrame = context->currentFrame;
+				context->currentFrame = &(context->framedata[context->nextFrameNum]);
 
-				gtk_widget_queue_draw(params->drawing_area);
+				gtk_widget_queue_draw(context->drawing_area);
 
 				if (previousFrame != NULL) {
 					g_mutex_unlock(previousFrame->framedrawn);
 					g_mutex_unlock(previousFrame->framecomplete);
 				}
 
-				DrawData.nextFrameNum++;
-				if (DrawData.nextFrameNum == NUMFRAMES) {
-					DrawData.nextFrameNum = 0;
+				context->nextFrameNum++;
+				if (context->nextFrameNum == NUMFRAMES) {
+					context->nextFrameNum = 0;
 				}
 
 #if Debug
-				printf("%s\n",params->dumpname);
+				printf("%s\n",context->dumpname);
 #endif
-				if (params->dumpname[0] != '\0') {
+				if (context->config->dumpname[0] != '\0') {
 #if Debug
 					printf("Creating image of frame to dump.\n");
 #endif
 
-					if (params->tifjpg) {
+					if (context->config->tifjpg) {
 #if Debug
 						printf("Dumping png.\n");
 #endif
 						sprintf(pictype, "png");
-						if (params->dumpnum)
-							sprintf(picname, "%s-%d.png", params->dumpname,
-									params->numframe);
+						if (context->config->dumpnum)
+							sprintf(picname, "%s-%d.png", context->config->dumpname,
+									context->currentFrame->numframe);
 						else
-							sprintf(picname, "%s-%5.3f.png", params->dumpname,
-									FrameTime);
+							sprintf(picname, "%s-%5.3f.png", context->config->dumpname,
+									context->currentFrame->atime);
 					} else {
 #if Debug
 						printf("Dumping jpg.\n");
 #endif
 						sprintf(pictype, "jpeg");
-						if (params->dumpnum)
-							sprintf(picname, "%s-%d.jpg", params->dumpname,
-									params->numframe);
+						if (context->config->dumpnum)
+							sprintf(picname, "%s-%d.jpg", context->config->dumpname,
+									context->currentFrame->numframe);
 						else
-							sprintf(picname, "%s-%5.3f.jpg", params->dumpname,
-									FrameTime);
+							sprintf(picname, "%s-%5.3f.jpg", context->config->dumpname,
+									context->currentFrame->atime);
 					}
 				}
-				params->numframe++;
+				context->currentFrame->numframe++;
 			}
 		}
 	}
@@ -493,46 +512,19 @@ gboolean switchToNextFrame(struct GlobalParams *params) {
 	printf("Setting angle entryboxes.\n");
 #endif
 
-	sprintf(tstr, "X angle: %f", params->xc);
+	sprintf(tstr, "X angle: %f", context->config->xc);
 	gtk_entry_set_text((GtkEntry *) xc_entry, tstr);
-	sprintf(tstr, "Y angle: %f", params->yc);
+	sprintf(tstr, "Y angle: %f", context->config->yc);
 	gtk_entry_set_text((GtkEntry *) yc_entry, tstr);
-	sprintf(tstr, "Z angle: %f", params->zc);
+	sprintf(tstr, "Z angle: %f", context->config->zc);
 	gtk_entry_set_text((GtkEntry *) zc_entry, tstr);
 
 	return TRUE;
 }
 
 /************************************************************************/
-/* This function is called when the redraw button is pressed in the 	*/
-/* setup window. It just redraws the frame.				*/
 /************************************************************************/
-void SetupRedraw(struct GlobalParams *params) {
-	if (params->absxsize != params->oldxsize
-			|| params->absysize != params->oldysize) {
-		gtk_widget_set_size_request(params->drawing_area,
-				params->absxsize + 2 * xborder, params->absysize + 2 * yborder);
-	}
-
-	setColorset(params, params->colorset);
-
-	triggerImageRedraw(NULL, params);
-
-	params->oldxc = params->xcolumn;
-	params->oldyc = params->ycolumn;
-	params->oldzc = params->zcolumn;
-	params->oldtc = params->tcolumn;
-	params->oldxsize = params->absxsize;
-	params->oldysize = params->absysize;
-}
-
-/************************************************************************/
-/* The StartEverything function is called by main() after the 		*/
-/* commandline arguments or the setupwindow has finished processing of 	*/
-/* the parameters. This function sets up all the buttons, entries, 	*/
-/* boxes,the timeout and the drawingboard.				*/
-/************************************************************************/
-void StartEverything(struct GlobalParams *params) {
+GtkWidget * getMainWindow(struct Context *context) {
 	GtkWidget *vbox, *hbox, *vboxleft, *vboxmiddle, *vboxright, *vboxrb;
 	GtkWidget *vboxcoord, *hboxx, *hboxy, *hboxz, *hboxsetup;
 	GtkWidget *quit_button, *restart_button, *pause_button, *reseto_button;
@@ -544,12 +536,9 @@ void StartEverything(struct GlobalParams *params) {
 	GtkWidget *window;
 
 	char buf[128];
-	gint i;
-
-	params->StartedAlready = TRUE;
 
 	/* Set the window title. */
-	sprintf(buf, "gdpc "GDPCVER" : %s", params->file);
+	sprintf(buf, "%s - " PROGNAME " "GDPCVER, context->config->file);
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW (window), buf);
@@ -580,24 +569,24 @@ void StartEverything(struct GlobalParams *params) {
 	/* Create the drawing area. */
 
 	drawing_area = gtk_drawing_area_new();
-	gtk_widget_set_size_request(drawing_area, params->absxsize + 2 * xborder,
-			params->absysize + 2 * yborder);
+	gtk_widget_set_size_request(drawing_area, context->config->absxsize + 2 * xborder,
+			context->config->absysize + 2 * yborder);
 
-	params->drawing_area = drawing_area;
+	context->drawing_area = drawing_area;
 
 	gtk_box_pack_start(GTK_BOX (vbox), drawing_area, TRUE, TRUE, 0);
 
 	/* Connect the events to their procedures. */
 	g_signal_connect(G_OBJECT (drawing_area), "draw",
-			G_CALLBACK (updateImageArea), params);
+			G_CALLBACK (updateImageArea), context);
 
 	g_signal_connect(G_OBJECT (drawing_area), "button_press_event",
-			G_CALLBACK (buttonPressEvent), params);
+			G_CALLBACK (buttonPressEvent), context);
 	g_signal_connect(G_OBJECT (drawing_area), "button_release_event",
-			G_CALLBACK (buttonReleaseEvent), params);
+			G_CALLBACK (buttonReleaseEvent), context);
 
 	g_signal_connect(G_OBJECT (drawing_area), "motion_notify_event",
-			G_CALLBACK (motionNotifyEvent), params);
+			G_CALLBACK (motionNotifyEvent), context);
 
 	gtk_widget_set_events(
 			drawing_area,
@@ -635,26 +624,26 @@ void StartEverything(struct GlobalParams *params) {
 	reseto_button = gtk_button_new_with_mnemonic("Reset _Orientation");
 	gtk_box_pack_start(GTK_BOX (vboxright), reseto_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (reseto_button), "clicked", G_CALLBACK (resetob),
-			(gpointer) params);
+			(gpointer) context);
 
 	/* Create restartAnimation button. */
 	restart_button = gtk_button_new_with_mnemonic("_Restart");
 	gtk_box_pack_start(GTK_BOX (hboxsetup), restart_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (restart_button), "clicked", G_CALLBACK (restartAnimation),
-			(gpointer) params);
+			(gpointer) context);
 
 	setup_button = gtk_button_new_with_mnemonic("_Setup");
 	;
 	gtk_box_pack_start(GTK_BOX (hboxsetup), setup_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (setup_button), "clicked", G_CALLBACK (setupButtonPressed),
-			(gpointer) params);
+			(gpointer) context);
 	gtk_box_pack_start(GTK_BOX (vboxleft), hboxsetup, TRUE, TRUE, 0);
 
 	/* Create pause button. */
 	pause_button = gtk_toggle_button_new_with_mnemonic("_Pause");
 	gtk_box_pack_start(GTK_BOX (vboxmiddle), pause_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (pause_button), "clicked", G_CALLBACK (pauseButtonPressed),
-			(gpointer) params);
+			(gpointer) context);
 
 	/* Create quit button. */
 	quit_button = gtk_button_new_from_stock(GTK_STOCK_QUIT);
@@ -665,56 +654,56 @@ void StartEverything(struct GlobalParams *params) {
 	xminus10_button = gtk_button_new_with_label("<<");
 	gtk_box_pack_start(GTK_BOX (hboxx), xminus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (xminus10_button), "clicked",
-			G_CALLBACK (xminus10b), (gpointer) params);
+			G_CALLBACK (xminus10b), (gpointer) context);
 	xminus_button = gtk_button_new_with_label("<");
 	gtk_box_pack_start(GTK_BOX (hboxx), xminus_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (xminus_button), "clicked", G_CALLBACK (xminusb),
-			(gpointer) params);
+			(gpointer) context);
 	gtk_box_pack_start(GTK_BOX (hboxx), xlabel, TRUE, TRUE, 0);
 	xplus_button = gtk_button_new_with_label(">");
 	gtk_box_pack_start(GTK_BOX (hboxx), xplus_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (xplus_button), "clicked", G_CALLBACK (xplusb),
-			(gpointer) params);
+			(gpointer) context);
 	xplus10_button = gtk_button_new_with_label(">>");
 	gtk_box_pack_start(GTK_BOX (hboxx), xplus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (xplus10_button), "clicked",
-			G_CALLBACK (xplus10b), (gpointer) params);
+			G_CALLBACK (xplus10b), (gpointer) context);
 
 	yminus10_button = gtk_button_new_with_label("<<");
 	gtk_box_pack_start(GTK_BOX (hboxy), yminus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (yminus10_button), "clicked",
-			G_CALLBACK (yminus10b), (gpointer) params);
+			G_CALLBACK (yminus10b), (gpointer) context);
 	yminus_button = gtk_button_new_with_label("<");
 	gtk_box_pack_start(GTK_BOX (hboxy), yminus_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (yminus_button), "clicked", G_CALLBACK (yminusb),
-			(gpointer) params);
+			(gpointer) context);
 	gtk_box_pack_start(GTK_BOX (hboxy), ylabel, TRUE, TRUE, 0);
 	yplus_button = gtk_button_new_with_label(">");
 	gtk_box_pack_start(GTK_BOX (hboxy), yplus_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (yplus_button), "clicked", G_CALLBACK (yplusb),
-			(gpointer) params);
+			(gpointer) context);
 	yplus10_button = gtk_button_new_with_label(">>");
 	gtk_box_pack_start(GTK_BOX (hboxy), yplus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (yplus10_button), "clicked",
-			G_CALLBACK (yplus10b), (gpointer) params);
+			G_CALLBACK (yplus10b), (gpointer) context);
 
 	zminus10_button = gtk_button_new_with_label("<<");
 	gtk_box_pack_start(GTK_BOX (hboxz), zminus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (zminus10_button), "clicked",
-			G_CALLBACK (zminus10b), (gpointer) params);
+			G_CALLBACK (zminus10b), (gpointer) context);
 	zminus_button = gtk_button_new_with_label("<");
 	gtk_box_pack_start(GTK_BOX (hboxz), zminus_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (zminus_button), "clicked", G_CALLBACK (zminusb),
-			(gpointer) params);
+			(gpointer) context);
 	gtk_box_pack_start(GTK_BOX (hboxz), zlabel, TRUE, TRUE, 0);
 	zplus_button = gtk_button_new_with_label(">");
 	gtk_box_pack_start(GTK_BOX (hboxz), zplus_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (zplus_button), "clicked", G_CALLBACK (zplusb),
-			(gpointer) params);
+			(gpointer) context);
 	zplus10_button = gtk_button_new_with_label(">>");
 	gtk_box_pack_start(GTK_BOX (hboxz), zplus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (zplus10_button), "clicked",
-			G_CALLBACK (zplus10b), (gpointer) params);
+			G_CALLBACK (zplus10b), (gpointer) context);
 
 	g_signal_connect(G_OBJECT (window), "destroy", G_CALLBACK (quit), window);
 
@@ -729,170 +718,183 @@ void StartEverything(struct GlobalParams *params) {
 	gtk_box_pack_start(GTK_BOX (vboxrb), hboxy, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX (vboxrb), hboxz, FALSE, FALSE, 0);
 
+	return window;
+}
+
+/************************************************************************/
+/* The StartEverything function is called by main() after the 		*/
+/* commandline arguments or the setupwindow has finished processing of 	*/
+/* the parameters. This function sets up all the buttons, entries, 	*/
+/* boxes,the timeout and the drawingboard.				*/
+/************************************************************************/
+void StartEverything(struct Context *context) {
+	GtkWidget *window;
+	gint i;
+
+	window = getMainWindow(context);
+
+	context->StartedAlready = TRUE;
+
 	/* Open the input file, if it fails exit. */
-	if (params->file[0] == '_')
-		params->fp = stdin;
+	if (context->config->file[0] == '_')
+		context->fp = stdin;
 	else {
-		params->fp = NULL;
-		params->fp = fopen(params->file, "r");
-		if (params->fp == NULL) {
-			printf("Error opening file: %s\n", params->file);
+		context->fp = NULL;
+		context->fp = fopen(context->config->file, "r");
+		if (context->fp == NULL) {
+			printf("Error opening file: %s\n", context->config->file);
 			gtk_main_quit();
 		}
-		fseek(params->fp, 0, 0);
+		fseek(context->fp, 0, 0);
 	}
 
 	/* Allocate colors */
-	setColorset(params, params->colorset);
+	setColorset(context->config);
 
 	/* Show all boxes,entries,buttons and pixmaps. */
 	gtk_widget_show_all(window);
 
-#if Debug 
-	printf("Initialising filereading/framedrawing semaphores.\n");
-#endif
-
 	for (i = 0; i < NUMFRAMES; i++) {
-		params->framedata[i].frameready = g_mutex_new();
-		g_mutex_lock(params->framedata[i].frameready);
-		params->framedata[i].framecomplete = g_mutex_new();
-		g_mutex_unlock(params->framedata[i].framecomplete);
-		params->framedata[i].framedrawn = g_mutex_new();
-		g_mutex_unlock(params->framedata[i].framedrawn);
-		params->framedata[i].atomdata = NULL;
+		context->framedata[i].frameready = g_mutex_new();
+		g_mutex_lock(context->framedata[i].frameready);
+		context->framedata[i].framecomplete = g_mutex_new();
+		g_mutex_unlock(context->framedata[i].framecomplete);
+		context->framedata[i].framedrawn = g_mutex_new();
+		g_mutex_unlock(context->framedata[i].framedrawn);
+		context->framedata[i].atomdata = NULL;
 	}
-	DrawData.nextFrameNum = 0;
-	DrawData.currentFrame = NULL;
+	context->nextFrameNum = 0;
+	context->currentFrame = NULL;
 
-#if Debug 
-	printf("Initialising filewait/EOF semaphores.\n");
-#endif
-
-	params->filewait = g_mutex_new();
-	g_mutex_lock(params->filewait);
-	params->atEnd = g_mutex_new();
-
-#if Debug 
-	printf("Starting filereading thread.\n");
-#endif
+	context->filewait = g_mutex_new();
+	g_mutex_lock(context->filewait);
+	context->atEnd = g_mutex_new();
 
 	th_a =
-			g_thread_create ((GThreadFunc) readInput, (gpointer) params, TRUE, NULL);
+			g_thread_create ((GThreadFunc) readInput, (gpointer) context, TRUE, NULL);
 	if (th_a == NULL) {
 		fprintf(stderr, "Creating read thread failed.\n");
 		gtk_main_quit();
 	}
 
-#if Debug
-	printf("Finished initialising threads.\n");
-#endif
-
 	/* Setup timeout. */
-	g_idle_add((GSourceFunc) switchToNextFrame, params);
+	g_idle_add((GSourceFunc) switchToNextFrame, context);
 }
 
 /************************************************************************/
-/* The main function sets up default parameters and calls either	*/
-/* handleargs or setupwindow depending on the number of commandline	*/
-/* parameters.								*/
+/************************************************************************/
+struct Configuration * copyConfiguration(struct Configuration *oldconfig) {
+	struct Configuration *newconfig;
+
+	newconfig = malloc(sizeof(struct Configuration));
+	memcpy(newconfig, oldconfig, sizeof(struct Configuration));
+	return newconfig;
+}
+
+/************************************************************************/
+/* Set all parameters to their default values, dont change this unless 	*/
+/* you know what you're doing. 											*/
+/************************************************************************/
+struct Configuration * getNewConfiguration() {
+	struct Configuration *config;
+
+	config = malloc(sizeof(struct Configuration));
+
+	if (config != NULL) {
+		config->absxsize = DEFAULT_DRAWING_AREA_X_SIZE;
+		config->absysize = DEFAULT_DRAWING_AREA_Y_SIZE;
+
+		config->xmin = 65535.0;
+		config->ymin = 65535.0;
+		config->zmin = 65535.0;
+		config->xmax = 0.0;
+		config->ymax = 0.0;
+		config->zmax = 0.0;
+
+		config->vary = DEFAULT_VARY;
+		config->scol = DEFAULT_SCOL;
+		config->sort = DEFAULT_SORT;
+		config->radius = DEFAULT_ATOM_RADIUS;
+		config->mode = DEFAULT_MODE;
+		config->colorset = DEFAULT_COLORSET;
+		config->dumpnum = DEFAULT_DUMPNUM;
+		config->whitebg = DEFAULT_WHITEBG;
+		config->erase = DEFAULT_ERASE;
+		config->fxyz = DEFAULT_FXYZ;
+		config->mbsleep = FALSE;
+		config->once = FALSE;
+		config->usetypes = FALSE;
+
+		config->xcolumn = DEFAULT_XCOLUMN;
+		config->ycolumn = DEFAULT_YCOLUMN;
+		config->zcolumn = DEFAULT_ZCOLUMN;
+		config->tcolumn = DEFAULT_TCOLUMN;
+
+		config->interval = DEFAULT_INTERVAL;
+
+		config->dumpname[0] = DEFAULT_DUMPNAME;
+
+		strcpy(config->timedelim, TIMESTRING);
+	}
+
+	return config;
+}
+
+/************************************************************************/
+/************************************************************************/
+struct Context * getNewContext() {
+	struct Context *context;
+
+	context = malloc(sizeof(struct Context));
+
+	if (context != NULL) {
+		context->iangle = 0.0;
+		context->jangle = 0.0;
+		context->kangle = 0.0;
+		context->imangle = 0.0;
+		context->jmangle = 0.0;
+		context->pausecheck = FALSE;
+		context->setupstop = FALSE;
+		context->pressed = FALSE;
+		context->StartedAlready = FALSE;
+		context->nextFrameNum = 0;
+		context->config = NULL;
+	}
+	return context;
+}
+
+/************************************************************************/
+/* The main function sets up default parameters and calls either		*/
+/* handleargs or setupwindow depending on the number of commandline		*/
+/* parameters.															*/
 /************************************************************************/
 int main(int argc, char **argv) {
-	struct GlobalParams params;
-
-#if Debug 
-	printf("Starting program.\n");
-#endif
-
-	/* Control variables for program and default settings, do NOT change */
-
-	params.iangle = 0.0;
-	params.jangle = 0.0;
-	params.kangle = 0.0;
-	params.imangle = 0.0;
-	params.jmangle = 0.0;
-	params.numframe = 1;
-	params.pausecheck = FALSE;
-	params.setupstop = FALSE;
-	params.pressed = FALSE;
-	params.StartedAlready = FALSE;
-	params.usetypes = FALSE;
-
-	DrawData.nextFrameNum = 0;
-	DrawData.params = &params;
-
-#if Debug 
-	printf("Fetching display variable.\n");
-#endif
-
-#if Debug 
-	printf("Initializing GTK.\n");
-#endif
+	struct Context *context;
+	struct Configuration *config;
 
 	/* Start gtk initialization. */
 	gtk_init(&argc, &argv);
 
 	g_thread_init(NULL);
 
-	printf("\n gdpc version "GDPCVER", Copyright (C) 2000 Jonas Frantz\n");
-	printf(" gdpc comes with ABSOLUTELY NO WARRANTY; for details\n");
-	printf(" check out the documentation.  This is free software, and\n");
-	printf(" you are welcome to redistribute it under all conditions.\n\n");
+	printf(DISCLAIMER);
 
-	/* Set all parameters to their default values, dont change this unless */
-	/* you know what you're doing. */
-
-	params.absxsize = drawXsize;
-	params.absysize = drawYsize;
-
-	params.xmin = 65535.0;
-	params.ymin = 65535.0;
-	params.zmin = 65535.0;
-	params.xmax = 0.0;
-	params.ymax = 0.0;
-	params.zmax = 0.0;
-
-	params.vary = VARY;
-	params.scol = SCOL;
-	params.sort = SORT;
-	params.radius = RADIUS;
-	params.mode = MODE;
-	params.colorset = COLORSET;
-	params.dumpnum = DUMPNUM;
-	params.whitebg = WHITEBG;
-	params.erase = ERASE;
-	params.fxyz = FXYZ;
-	params.mbsleep = FALSE;
-	params.once = FALSE;
-
-	params.xcolumn = XCOLUMN;
-	params.ycolumn = YCOLUMN;
-	params.zcolumn = ZCOLUMN;
-	params.tcolumn = TCOLUMN;
-
-	params.interval = 0;
-
-	params.dumpname[0] = '\0';
-
-	strcpy(params.timedelim, TIMESTRING);
+	context = getNewContext();
 
 	/* Handle arguments passed to the program. */
 	if (argc == 1) {
-#if Debug 
-		printf("Starting setup window.\n");
-#endif
-		setupwindow(&params);
+		config = getNewConfiguration();
+		if (config != NULL) {
+			setContextConfig(context, config);
+		}
+		showSetupWindow(context);
 	} else {
-#if Debug 
-		printf("Start processing commandline arguments.\n");
-#endif
-		if (!handleargs(argc, argv, &params))
+		if ((config = handleArgs(argc, argv)) == NULL) {
 			exit(-1);
-		StartEverything(&params);
+		}
+		setContextConfig(context, config);
+		StartEverything(context);
 	}
-
-#if Debug 
-	printf("Starting gtkmain().\n");
-#endif
 
 	/* Start gtk. */
 

@@ -29,14 +29,13 @@
 #include <math.h>
 #include "parameters.h"
 
-static double ic[3][3] = { { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
-		{ 0.0, 0.0, 1.0 } };
-
-double FrameTime = 0;
+static double ic[3][3] = {{ 1.0, 0.0, 0.0 },
+						  { 0.0, 1.0, 0.0 },
+						  { 0.0, 0.0, 1.0 }};
 
 /************************************************************************/
 /* Transforms relative coordinates in input file to absolute coordinates*/
-/* on the drawable pixmap.						*/
+/* on the drawable pixmap.												*/
 /************************************************************************/
 gint transf_abs(double x, double xmin, double xmax, gint absxsize) {
 	double newx;
@@ -47,68 +46,74 @@ gint transf_abs(double x, double xmin, double xmax, gint absxsize) {
 
 /************************************************************************/
 /* This function does the actual drawing of the circles accordingly to	*/
-/* mode.								*/
+/* mode.																*/
 /************************************************************************/
-void drawcircles(cairo_t *cr, double xmin, double xmax, double ymin,
-		double ymax, double zmin, double zmax, gint absxsize, gint absysize,
-		gint mode, gint radius, gint vary, struct xyzstruc *coords,
-		gboolean usetypes, gint numtypes, gint numatoms,
-		struct GlobalParams *params) {
+void drawcircles(cairo_t *cr, struct Frame *frame, struct Atom *coords,
+		gint numatoms, struct Configuration *config) {
 	gint x, y, c, i, rtmp;
+	gint radius;
 	cairo_pattern_t *pat;
 
-	radius /= 2;
+	radius = config->radius / 2;
 	for (i = 0; i < numatoms; i++) {
-		x = transf_abs(coords[i].xcoord, xmin, xmax, absxsize);
-		y = transf_abs(coords[i].ycoord, ymin, ymax, absysize);
-		if (coords[i].zcoord >= zmin && coords[i].zcoord <= zmax) {
+		x = transf_abs(coords[i].xcoord, frame->xmin, frame->xmax,
+				config->absxsize);
+		y = transf_abs(coords[i].ycoord, frame->ymin, frame->ymax,
+				config->absysize);
+		if (coords[i].zcoord >= frame->zmin
+				&& coords[i].zcoord <= frame->zmax) {
 
-			if (usetypes)
-				c = transf_abs(coords[i].atype, 0, numtypes + 1, NUMCOLORS);
+			if (config->usetypes)
+				c = transf_abs(coords[i].atype, 0, config->numtypes + 1,
+						NUMCOLORS);
 			else
-				c = transf_abs(coords[i].zcoord, zmin, zmax, NUMCOLORS);
+				c = transf_abs(coords[i].zcoord, frame->zmin, frame->zmax,
+						NUMCOLORS);
 
-			if (vary == 1) {
+			if (config->vary == 1) {
 				rtmp = (int) (radius
-						* (0.5 * (coords[i].zcoord - zmin) / (zmax - zmin))
-						+ 0.5 * radius);
-			} else if (vary == 2) {
+						* (0.5 * (coords[i].zcoord - frame->zmin)
+								/ (frame->zmax - frame->zmin)) + 0.5 * radius);
+			} else if (config->vary == 2) {
 				rtmp = (int) (radius
-						* (0.5 * (-coords[i].zcoord + zmax) / (zmax - zmin))
-						+ 0.5 * radius);
+						* (0.5 * (-coords[i].zcoord + frame->zmax)
+								/ (frame->zmax - frame->zmin)) + 0.5 * radius);
 			} else
 				rtmp = radius;
 
-			if (x > 0 && y > 0 && x < (absxsize - radius / 2)
-					&& y < (absysize - radius / 2)) {
-				if (mode == 0) {
+			if (x > 0 && y > 0 && x < (config->absxsize - radius / 2)
+					&& y < (config->absysize - radius / 2)) {
+				if (config->mode == 0) {
 					cairo_rectangle(cr, x - rtmp / 2 + xborder,
-							(absysize - y) - rtmp / 2 + yborder, rtmp, rtmp);
-					cairo_set_source_rgb(cr, params->xcolorset[c][0],
-							params->xcolorset[c][1], params->xcolorset[c][2]);
+							(config->absysize - y) - rtmp / 2 + yborder, rtmp,
+							rtmp);
+					cairo_set_source_rgb(cr, config->xcolorset[c][0],
+							config->xcolorset[c][1], config->xcolorset[c][2]);
 					cairo_fill(cr);
-				} else if (mode == 1) {
-					cairo_arc(cr, x + xborder, (absysize - y) + yborder, rtmp,
-							0, 2 * M_PI);
-					cairo_set_source_rgb(cr, params->xcolorset[c][0],
-							params->xcolorset[c][1], params->xcolorset[c][2]);
+				} else if (config->mode == 1) {
+					cairo_arc(cr, x + xborder, (config->absysize - y) + yborder,
+							rtmp, 0, 2 * M_PI);
+					cairo_set_source_rgb(cr, config->xcolorset[c][0],
+							config->xcolorset[c][1], config->xcolorset[c][2]);
 					cairo_fill(cr);
-				} else if (mode == 2) {
+				} else if (config->mode == 2) {
 					pat = cairo_pattern_create_radial(x + xborder - rtmp / 6.0,
-							(absysize - y) + yborder - rtmp / 3.0, rtmp / 10.0, //115.2, 102.4, 25.6,
+							(config->absysize - y) + yborder - rtmp / 3.0,
+							rtmp / 10.0, //115.2, 102.4, 25.6,
 							x + xborder - rtmp / 3.0,
-							(absysize - y) + yborder - rtmp / 3.0, rtmp * 1.67); //102.4,  102.4, 128.0);
+							(config->absysize - y) + yborder - rtmp / 3.0,
+							rtmp * 1.67); //102.4,  102.4, 128.0);
 					cairo_pattern_add_color_stop_rgba(pat, 0, 1, 1, 1, 1);
 					cairo_pattern_add_color_stop_rgba(pat, 0.2,
-							params->xcolorset[c][0], params->xcolorset[c][1],
-							params->xcolorset[c][2], 1);
+							config->xcolorset[c][0], config->xcolorset[c][1],
+							config->xcolorset[c][2], 1);
 					cairo_pattern_add_color_stop_rgba(pat, 1,
-							0.2 * params->xcolorset[c][0],
-							0.2 * params->xcolorset[c][1],
-							0.2 * params->xcolorset[c][2], 1);
+							0.2 * config->xcolorset[c][0],
+							0.2 * config->xcolorset[c][1],
+							0.2 * config->xcolorset[c][2], 1);
 					cairo_set_source(cr, pat);
-					cairo_arc(cr, x + xborder, (absysize - y) + yborder, rtmp,
-							0, 2 * M_PI);
+					cairo_arc(cr, x + xborder, (config->absysize - y) + yborder,
+							rtmp, 0, 2 * M_PI);
 					cairo_fill(cr);
 					cairo_pattern_destroy(pat);
 				}
@@ -119,9 +124,9 @@ void drawcircles(cairo_t *cr, double xmin, double xmax, double ymin,
 
 /************************************************************************/
 /* This function rotates the coordinates of the atoms, sorts them and	*/
-/* calls the drawcircles to draw them.					*/
+/* calls the drawcircles to draw them.									*/
 /************************************************************************/
-void rotateAtoms(struct DrawStruct DrawData) {
+void rotateAtoms(struct Context *context) {
 	gint i, j, numatoms;
 
 	double isin, icos, jsin, jcos, ksin, kcos;
@@ -130,14 +135,14 @@ void rotateAtoms(struct DrawStruct DrawData) {
 	double ictmp[3];
 	double newic[3][3];
 
-	struct xyzstruc *newcoords;
-	struct xyzstruc *coords;
-	struct GlobalParams *params;
+	struct Atom *newcoords;
+	struct Atom *coords;
+	struct Configuration *config;
 
-	params = DrawData.params;
+	config = context->config;
 
-	coords = (DrawData.currentFrame)->atomdata;
-	numatoms = (DrawData.currentFrame)->numAtoms;
+	coords = (context->currentFrame)->atomdata;
+	numatoms = (context->currentFrame)->numAtoms;
 
 	minx = 0.0;
 	maxx = 0.0;
@@ -145,23 +150,22 @@ void rotateAtoms(struct DrawStruct DrawData) {
 	maxy = 0.0;
 	minz = 0.0;
 	maxz = 0.0;
-	isin = sin(params->iangle * (-PI / 180.0));
-	icos = cos(params->iangle * (-PI / 180.0));
-	jsin = sin(params->jangle * (PI / 180.0));
-	jcos = cos(params->jangle * (PI / 180.0));
-	ksin = sin(params->kangle * (-PI / 180.0));
-	kcos = cos(params->kangle * (-PI / 180.0));
-	imsin = sin(params->jmangle * (-PI / 180.0));
-	imcos = cos(params->jmangle * (-PI / 180.0));
-	jmsin = sin(params->imangle * (-PI / 180.0));
-	jmcos = cos(params->imangle * (-PI / 180.0));
+	isin = sin(context->iangle * (-PI / 180.0));
+	icos = cos(context->iangle * (-PI / 180.0));
+	jsin = sin(context->jangle * (PI / 180.0));
+	jcos = cos(context->jangle * (PI / 180.0));
+	ksin = sin(context->kangle * (-PI / 180.0));
+	kcos = cos(context->kangle * (-PI / 180.0));
+	imsin = sin(context->jmangle * (-PI / 180.0));
+	imcos = cos(context->jmangle * (-PI / 180.0));
+	jmsin = sin(context->imangle * (-PI / 180.0));
+	jmcos = cos(context->imangle * (-PI / 180.0));
 
-	if (params->erase) {
-		clearDrawable(DrawData);
+	if (config->erase) {
+		clearDrawable(context);
 	}
 
-	newcoords = (struct xyzstruc *) g_malloc(
-			numatoms * sizeof(struct xyzstruc));
+	newcoords = (struct Atom *) g_malloc(numatoms * sizeof(struct Atom));
 
 	for (i = 0; i < 3; i++)
 		newic[0][i] = ic[0][i] * jcos * kcos + ic[1][i] * (-jcos * ksin)
@@ -213,69 +217,69 @@ void rotateAtoms(struct DrawStruct DrawData) {
 			minz = newcoords[i].zcoord;
 	}
 
-	params->iangle = 0.0;
-	params->jangle = 0.0;
-	params->kangle = 0.0;
-	params->imangle = 0.0;
-	params->jmangle = 0.0;
+	context->iangle = 0.0;
+	context->jangle = 0.0;
+	context->kangle = 0.0;
+	context->imangle = 0.0;
+	context->jmangle = 0.0;
 
 	if (ic[0][0] != 0.0)
-		params->zc = atan(ic[0][1] / ic[0][0]) * (180.0 / PI);
+		config->zc = atan(ic[0][1] / ic[0][0]) * (180.0 / PI);
 	else
-		params->zc = 0.0;
+		config->zc = 0.0;
 	if (ic[0][0] < 0.0 && ic[0][1] > 0.0)
-		params->zc += 180;
+		config->zc += 180;
 	else if (ic[0][0] < 0.0 && ic[0][1] < 0.0)
-		params->zc += 180;
+		config->zc += 180;
 	else if (ic[0][0] > 0.0 && ic[0][1] < 0.0)
-		params->zc += 360;
+		config->zc += 360;
 
-	ictmp[0] = ic[2][0] * cos(-params->zc * (PI / 180.0))
-			- ic[2][1] * sin(-params->zc * (PI / 180.0));
+	ictmp[0] = ic[2][0] * cos(-config->zc * (PI / 180.0))
+			- ic[2][1] * sin(-config->zc * (PI / 180.0));
 
 	if (ic[2][2] != 0.0)
-		params->yc = atan(-ictmp[0] / ic[2][2]) * (180.0 / PI);
+		config->yc = atan(-ictmp[0] / ic[2][2]) * (180.0 / PI);
 	else
-		params->yc = 0.0;
+		config->yc = 0.0;
 	if (ic[2][2] < 0.0 && ictmp[0] > 0.0)
-		params->yc += 180;
+		config->yc += 180;
 	else if (ic[2][2] < 0.0 && ictmp[0] < 0.0)
-		params->yc += 180;
+		config->yc += 180;
 	else if (ic[2][2] > 0.0 && ictmp[0] < 0.0)
-		params->yc += 360;
+		config->yc += 360;
 
-	ictmp[0] = ic[1][0] * cos(-params->zc * (PI / 180.0))
-			- ic[1][1] * sin(-params->zc * (PI / 180.0));
-	ictmp[1] = ic[1][0] * sin(-params->zc * (PI / 180.0))
-			+ ic[1][1] * cos(-params->zc * (PI / 180.0));
-	ictmp[2] = ictmp[0] * sin(-params->yc * (PI / 180.0))
-			+ ic[1][2] * cos(-params->yc * (PI / 180.0));
+	ictmp[0] = ic[1][0] * cos(-config->zc * (PI / 180.0))
+			- ic[1][1] * sin(-config->zc * (PI / 180.0));
+	ictmp[1] = ic[1][0] * sin(-config->zc * (PI / 180.0))
+			+ ic[1][1] * cos(-config->zc * (PI / 180.0));
+	ictmp[2] = ictmp[0] * sin(-config->yc * (PI / 180.0))
+			+ ic[1][2] * cos(-config->yc * (PI / 180.0));
 
 	if (ictmp[1] != 0.0)
-		params->xc = atan(ictmp[2] / ictmp[1]) * (180.0 / PI);
+		config->xc = atan(ictmp[2] / ictmp[1]) * (180.0 / PI);
 	else
-		params->xc = 0.0;
+		config->xc = 0.0;
 	if (ictmp[1] < 0.0 && ictmp[2] > 0.0)
-		params->xc += 180;
+		config->xc += 180;
 	else if (ictmp[1] < 0.0 && ictmp[2] < 0.0)
-		params->xc += 180;
+		config->xc += 180;
 	else if (ictmp[1] > 0.0 && ictmp[2] < 0.0)
-		params->xc += 360;
+		config->xc += 360;
 
-	if (params->xc <= 0.0)
-		params->xc += 360.0;
-	if (params->xc >= 360.0)
-		params->xc -= 360.0;
-	if (params->yc <= 0.0)
-		params->yc += 360.0;
-	if (params->yc >= 360.0)
-		params->yc -= 360.0;
-	if (params->zc <= 0.0)
-		params->zc += 360.0;
-	if (params->zc >= 360.0)
-		params->zc -= 360.0;
+	if (config->xc <= 0.0)
+		config->xc += 360.0;
+	if (config->xc >= 360.0)
+		config->xc -= 360.0;
+	if (config->yc <= 0.0)
+		config->yc += 360.0;
+	if (config->yc >= 360.0)
+		config->yc -= 360.0;
+	if (config->zc <= 0.0)
+		config->zc += 360.0;
+	if (config->zc >= 360.0)
+		config->zc -= 360.0;
 
-	if (params->sort == 2) {
+	if (config->sort == 2) {
 		sortatoms(newcoords, 0, numatoms - 1, FALSE);
 	} else
 		sortatoms(newcoords, 0, numatoms - 1, TRUE);
@@ -284,35 +288,31 @@ void rotateAtoms(struct DrawStruct DrawData) {
 		newcoords[i].zcoord = coords[newcoords[i].index].zcoord;
 	}
 
-	if (params->xmin == 65535.0) {
-		(DrawData.currentFrame)->xmax = maxx;
-		(DrawData.currentFrame)->xmin = minx;
+	if (config->xmin == 65535.0) {
+		(context->currentFrame)->xmax = maxx;
+		(context->currentFrame)->xmin = minx;
 	} else {
-		(DrawData.currentFrame)->xmax = params->xmax;
-		(DrawData.currentFrame)->xmin = params->xmin;
+		(context->currentFrame)->xmax = config->xmax;
+		(context->currentFrame)->xmin = config->xmin;
 	}
-	if (params->ymin == 65535.0) {
-		(DrawData.currentFrame)->ymax = maxy;
-		(DrawData.currentFrame)->ymin = miny;
+	if (config->ymin == 65535.0) {
+		(context->currentFrame)->ymax = maxy;
+		(context->currentFrame)->ymin = miny;
 	} else {
-		(DrawData.currentFrame)->ymax = params->ymax;
-		(DrawData.currentFrame)->ymin = params->ymin;
+		(context->currentFrame)->ymax = config->ymax;
+		(context->currentFrame)->ymin = config->ymin;
 	}
-	if (params->zmin == 65535.0) {
-		(DrawData.currentFrame)->zmax = maxz;
-		(DrawData.currentFrame)->zmin = minz;
+	if (config->zmin == 65535.0) {
+		(context->currentFrame)->zmax = maxz;
+		(context->currentFrame)->zmin = minz;
 	} else {
-		(DrawData.currentFrame)->zmax = params->zmax;
-		(DrawData.currentFrame)->zmin = params->zmin;
+		(context->currentFrame)->zmax = config->zmax;
+		(context->currentFrame)->zmin = config->zmin;
 	}
 
-	drawcircles(DrawData.cr, (DrawData.currentFrame)->xmin, (DrawData.currentFrame)->xmax,
-			(DrawData.currentFrame)->ymin, (DrawData.currentFrame)->ymax,
-			(DrawData.currentFrame)->zmin, (DrawData.currentFrame)->zmax, params->absxsize,
-			params->absysize, params->mode, params->radius, params->vary,
-			newcoords, params->usetypes, params->numtypes, numatoms, params);
+	drawcircles(context->cr, context->currentFrame, newcoords, numatoms,
+			context->config);
 
-	FrameTime = (DrawData.currentFrame)->atime;
 	g_free(newcoords);
 }
 
@@ -320,23 +320,23 @@ void rotateAtoms(struct DrawStruct DrawData) {
 /* Clears the drawable area and draws the rectangle which represents	*/
 /* border of the simulationbox.						*/
 /************************************************************************/
-void clearDrawable(struct DrawStruct DrawData) {
+void clearDrawable(struct Context *context) {
 
-	cairo_rectangle(DrawData.cr, 0.0, 0.0, DrawData.crXSize, DrawData.crYSize);
-	if (DrawData.params->whitebg) {
-		cairo_set_source_rgb(DrawData.cr, 1, 1, 1);
-		cairo_fill(DrawData.cr);
-		cairo_rectangle(DrawData.cr, xborder, yborder,
-				DrawData.params->absxsize, DrawData.params->absysize);
-		cairo_set_source_rgb(DrawData.cr, 0, 0, 0);
-		cairo_stroke(DrawData.cr);
+	cairo_rectangle(context->cr, 0.0, 0.0, context->crXSize, context->crYSize);
+	if (context->config->whitebg) {
+		cairo_set_source_rgb(context->cr, 1, 1, 1);
+		cairo_fill(context->cr);
+		cairo_rectangle(context->cr, xborder, yborder,
+				context->config->absxsize, context->config->absysize);
+		cairo_set_source_rgb(context->cr, 0, 0, 0);
+		cairo_stroke(context->cr);
 	} else {
-		cairo_set_source_rgb(DrawData.cr, 0, 0, 0);
-		cairo_fill(DrawData.cr);
-		cairo_rectangle(DrawData.cr, xborder, yborder,
-				DrawData.params->absxsize, DrawData.params->absysize);
-		cairo_set_source_rgb(DrawData.cr, 1, 1, 1);
-		cairo_stroke(DrawData.cr);
+		cairo_set_source_rgb(context->cr, 0, 0, 0);
+		cairo_fill(context->cr);
+		cairo_rectangle(context->cr, xborder, yborder,
+				context->config->absxsize, context->config->absysize);
+		cairo_set_source_rgb(context->cr, 1, 1, 1);
+		cairo_stroke(context->cr);
 	}
 
 }

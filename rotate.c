@@ -32,21 +32,21 @@
 /************************************************************************/
 /* The following procedures take care of the one step angle change.	*/
 /************************************************************************/
-void xplusb(GtkWidget *widget, struct GlobalParams *params) {
+void xplusb(GtkWidget *widget, struct Context *context) {
 	gint getval;
 
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
+	if (g_mutex_trylock(context->atEnd) == TRUE) {
 		getval = 1;
-		g_mutex_unlock(params->atEnd);
+		g_mutex_unlock(context->atEnd);
 	} else
 		getval = 0;
 
-	params->iangle = 1.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
+	context->iangle = 1.0;
+	if (context->pausecheck || getval == 0)
+		triggerImageRedraw(widget, context);
 }
 
-void yplusb(GtkWidget *widget, struct GlobalParams *params) {
+void yplusb(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -60,7 +60,7 @@ void yplusb(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void zplusb(GtkWidget *widget, struct GlobalParams *params) {
+void zplusb(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -74,7 +74,7 @@ void zplusb(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void xminusb(GtkWidget *widget, struct GlobalParams *params) {
+void xminusb(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -88,7 +88,7 @@ void xminusb(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void yminusb(GtkWidget *widget, struct GlobalParams *params) {
+void yminusb(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -102,7 +102,7 @@ void yminusb(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void zminusb(GtkWidget *widget, struct GlobalParams *params) {
+void zminusb(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -119,21 +119,21 @@ void zminusb(GtkWidget *widget, struct GlobalParams *params) {
 /************************************************************************/
 /* The following procedures take care of the 10 step angle change.	*/
 /************************************************************************/
-void xplus10b(GtkWidget *widget, struct GlobalParams *params) {
+void xplus10b(GtkWidget *widget, struct Context *context) {
 	gint getval;
 
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
+	if (g_mutex_trylock(context->atEnd) == TRUE) {
 		getval = 1;
-		g_mutex_unlock(params->atEnd);
+		g_mutex_unlock(context->atEnd);
 	} else
 		getval = 0;
 
-	params->iangle = 10.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
+	context->iangle = 10.0;
+	if (context->pausecheck || getval == 0)
+		triggerImageRedraw(widget, context);
 }
 
-void yplus10b(GtkWidget *widget, struct GlobalParams *params) {
+void yplus10b(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -147,7 +147,7 @@ void yplus10b(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void zplus10b(GtkWidget *widget, struct GlobalParams *params) {
+void zplus10b(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -161,7 +161,7 @@ void zplus10b(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void xminus10b(GtkWidget *widget, struct GlobalParams *params) {
+void xminus10b(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -175,7 +175,7 @@ void xminus10b(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void yminus10b(GtkWidget *widget, struct GlobalParams *params) {
+void yminus10b(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -189,7 +189,7 @@ void yminus10b(GtkWidget *widget, struct GlobalParams *params) {
 		triggerImageRedraw(widget, params);
 }
 
-void zminus10b(GtkWidget *widget, struct GlobalParams *params) {
+void zminus10b(GtkWidget *widget, struct Context *params) {
 	gint getval;
 
 	if (g_mutex_trylock(params->atEnd) == TRUE) {
@@ -207,9 +207,9 @@ void zminus10b(GtkWidget *widget, struct GlobalParams *params) {
 /* This procedure is called when the Reset orientation button is 	*/
 /* pressed. It resets the angles and prints them in their entries.	*/
 /************************************************************************/
-void resetob(GtkWidget *widget, struct GlobalParams *params) {
+void resetob(GtkWidget *widget, struct Context *context) {
 	resetic();
-	triggerImageRedraw(widget, params);
+	triggerImageRedraw(widget, context);
 }
 
 /************************************************************************/
@@ -218,17 +218,17 @@ void resetob(GtkWidget *widget, struct GlobalParams *params) {
 /* dragged distance and direction and calls the rotating procedure.	*/
 /************************************************************************/
 void mouserotate(GtkWidget *widget, gint xdelta, gint ydelta,
-		struct GlobalParams *params) {
+		struct Context *context) {
 	gint getval;
 
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
+	if (g_mutex_trylock(context->atEnd) == TRUE) {
 		getval = 1;
-		g_mutex_unlock(params->atEnd);
+		g_mutex_unlock(context->atEnd);
 	} else
 		getval = 0;
 
-	params->imangle = (xdelta * 90.0) / (double) params->absxsize;
-	params->jmangle = (ydelta * 90.0) / (double) params->absysize;
-	if (params->pausecheck || params->mbsleep || getval == 0)
-		triggerImageRedraw(widget, params);
+	context->imangle = (xdelta * 90.0) / (double) context->config->absxsize;
+	context->jmangle = (ydelta * 90.0) / (double) context->config->absysize;
+	if (context->pausecheck || context->config->mbsleep || getval == 0)
+		triggerImageRedraw(widget, context);
 }
