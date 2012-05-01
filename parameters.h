@@ -107,6 +107,10 @@
 #define DEFAULT_INTERVAL 0
 #define DEFAULT_DUMPNAME '\0'
 
+#define X_VECTOR { 1.0, 0.0, 0.0 }
+#define Y_VECTOR { 0.0, 1.0, 0.0 }
+#define Z_VECTOR { 0.0, 0.0, 1.0 }
+
 /* Declaration of structure which describes the atoms data. */
 
 struct Atom {
@@ -186,7 +190,6 @@ struct Configuration {
 
 /* Declaration of structure used for passing information to drawing functions */
 struct Context {
-	cairo_t *cr;
 	gint crXSize, crYSize;
 	GtkWidget *drawing_area;
 	struct Configuration *config;
@@ -218,14 +221,15 @@ void setupApplyNewConfig(struct Context *context, struct Configuration *newconfi
 
 struct Configuration * getNewConfiguration();
 
-void clearDrawable(struct Context *context);
-
 void showSetupWindow(struct Context *context);
 
-void rotateAtoms(struct Context *context);
+void drawFrame(struct Context *context, cairo_t *cr);
+void clearFrame(struct Context *context, cairo_t *cr);
 
-void mouserotate(GtkWidget *widget, gint xdelta, gint ydelta,
+void mouseRotate(GtkWidget *widget, gint xdelta, gint ydelta,
 		struct Context *context);
+struct Atom * rotateAtoms(struct Context *context);
+void resetOrientation();
 
 void xplusb(GtkWidget *widget, struct Context *context);
 void yplusb(GtkWidget *widget, struct Context *context);
@@ -239,14 +243,12 @@ void zplus10b(GtkWidget *widget, struct Context *context);
 void xminus10b(GtkWidget *widget, struct Context *context);
 void yminus10b(GtkWidget *widget, struct Context *context);
 void zminus10b(GtkWidget *widget, struct Context *context);
-void resetob(GtkWidget *widget, struct Context *context);
+
+void resetOrientationButtonPressed(GtkWidget *widget, struct Context *context);
 
 void sortatoms(struct Atom *coords, gint left, gint right, gboolean sort);
 
 void triggerImageRedraw(GtkWidget *widget, struct Context *context);
-void resetic();
-
-gint switchToNextFrame(struct Context *context);
 
 void setColorset(struct Configuration *config);
 

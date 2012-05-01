@@ -29,15 +29,11 @@
 #include <math.h>
 #include "parameters.h"
 
-static double ic[3][3] = {{ 1.0, 0.0, 0.0 },
-						  { 0.0, 1.0, 0.0 },
-						  { 0.0, 0.0, 1.0 }};
-
 /************************************************************************/
 /* Transforms relative coordinates in input file to absolute coordinates*/
 /* on the drawable pixmap.												*/
 /************************************************************************/
-gint transf_abs(double x, double xmin, double xmax, gint absxsize) {
+gint transformAbsoluteToRelative(double x, double xmin, double xmax, gint absxsize) {
 	double newx;
 
 	newx = (x - xmin) / (xmax - xmin);
@@ -48,7 +44,7 @@ gint transf_abs(double x, double xmin, double xmax, gint absxsize) {
 /* This function does the actual drawing of the circles accordingly to	*/
 /* mode.																*/
 /************************************************************************/
-void drawcircles(cairo_t *cr, struct Frame *frame, struct Atom *coords,
+void drawAtoms(cairo_t *cr, struct Frame *frame, struct Atom *coords,
 		gint numatoms, struct Configuration *config) {
 	gint x, y, c, i, rtmp;
 	gint radius;
@@ -56,18 +52,18 @@ void drawcircles(cairo_t *cr, struct Frame *frame, struct Atom *coords,
 
 	radius = config->radius / 2;
 	for (i = 0; i < numatoms; i++) {
-		x = transf_abs(coords[i].xcoord, frame->xmin, frame->xmax,
+		x = transformAbsoluteToRelative(coords[i].xcoord, frame->xmin, frame->xmax,
 				config->absxsize);
-		y = transf_abs(coords[i].ycoord, frame->ymin, frame->ymax,
+		y = transformAbsoluteToRelative(coords[i].ycoord, frame->ymin, frame->ymax,
 				config->absysize);
 		if (coords[i].zcoord >= frame->zmin
 				&& coords[i].zcoord <= frame->zmax) {
 
 			if (config->usetypes)
-				c = transf_abs(coords[i].atype, 0, config->numtypes + 1,
+				c = transformAbsoluteToRelative(coords[i].atype, 0, config->numtypes + 1,
 						NUMCOLORS);
 			else
-				c = transf_abs(coords[i].zcoord, frame->zmin, frame->zmax,
+				c = transformAbsoluteToRelative(coords[i].zcoord, frame->zmin, frame->zmax,
 						NUMCOLORS);
 
 			if (config->vary == 1) {
@@ -122,237 +118,45 @@ void drawcircles(cairo_t *cr, struct Frame *frame, struct Atom *coords,
 	}
 }
 
-/************************************************************************/
-/* This function rotates the coordinates of the atoms, sorts them and	*/
-/* calls the drawcircles to draw them.									*/
-/************************************************************************/
-void rotateAtoms(struct Context *context) {
-	gint i, j, numatoms;
-
-	double isin, icos, jsin, jcos, ksin, kcos;
-	double maxx, minx, maxy, miny, maxz, minz;
-	double imsin, imcos, jmsin, jmcos;
-	double ictmp[3];
-	double newic[3][3];
-
-	struct Atom *newcoords;
-	struct Atom *coords;
-	struct Configuration *config;
-
-	config = context->config;
-
-	coords = (context->currentFrame)->atomdata;
-	numatoms = (context->currentFrame)->numAtoms;
-
-	minx = 0.0;
-	maxx = 0.0;
-	miny = 0.0;
-	maxy = 0.0;
-	minz = 0.0;
-	maxz = 0.0;
-	isin = sin(context->iangle * (-PI / 180.0));
-	icos = cos(context->iangle * (-PI / 180.0));
-	jsin = sin(context->jangle * (PI / 180.0));
-	jcos = cos(context->jangle * (PI / 180.0));
-	ksin = sin(context->kangle * (-PI / 180.0));
-	kcos = cos(context->kangle * (-PI / 180.0));
-	imsin = sin(context->jmangle * (-PI / 180.0));
-	imcos = cos(context->jmangle * (-PI / 180.0));
-	jmsin = sin(context->imangle * (-PI / 180.0));
-	jmcos = cos(context->imangle * (-PI / 180.0));
-
-	if (config->erase) {
-		clearDrawable(context);
-	}
-
-	newcoords = (struct Atom *) g_malloc(numatoms * sizeof(struct Atom));
-
-	for (i = 0; i < 3; i++)
-		newic[0][i] = ic[0][i] * jcos * kcos + ic[1][i] * (-jcos * ksin)
-				+ ic[2][i] * jsin;
-	for (i = 0; i < 3; i++)
-		newic[1][i] = ic[0][i] * (isin * jsin * kcos + icos * ksin)
-				+ ic[1][i] * (-isin * jsin * ksin + icos * kcos)
-				+ ic[2][i] * (-isin * jcos);
-	for (i = 0; i < 3; i++)
-		newic[2][i] = ic[0][i] * (-icos * jsin * kcos + isin * ksin)
-				+ ic[1][i] * (icos * jsin * ksin + isin * kcos)
-				+ ic[2][i] * icos * jcos;
-	for (i = 0; i < 3; i++)
-		for (j = 0; j < 3; j++)
-			ic[i][j] = newic[i][j];
-
-	for (i = 0; i < 3; i++)
-		newic[0][i] = ic[0][i] * jmcos + ic[2][i] * jmsin;
-	for (i = 0; i < 3; i++)
-		newic[1][i] = ic[0][i] * imsin * jmsin + ic[1][i] * imcos
-				+ ic[2][i] * (-imsin * jmcos);
-	for (i = 0; i < 3; i++)
-		newic[2][i] = ic[0][i] * (-imcos * jmsin) + ic[1][i] * imsin
-				+ ic[2][i] * imcos * jmcos;
-	for (i = 0; i < 3; i++)
-		for (j = 0; j < 3; j++)
-			ic[i][j] = newic[i][j];
-
-	for (i = 0; i < numatoms; i++) {
-		newcoords[i].xcoord = ic[0][0] * coords[i].xcoord
-				+ ic[0][1] * coords[i].ycoord + ic[0][2] * coords[i].zcoord;
-		newcoords[i].ycoord = ic[1][0] * coords[i].xcoord
-				+ ic[1][1] * coords[i].ycoord + ic[1][2] * coords[i].zcoord;
-		newcoords[i].zcoord = ic[2][0] * coords[i].xcoord
-				+ ic[2][1] * coords[i].ycoord + ic[2][2] * coords[i].zcoord;
-		newcoords[i].atype = coords[i].atype;
-		newcoords[i].index = i;
-		if (newcoords[i].xcoord > maxx)
-			maxx = newcoords[i].xcoord;
-		if (newcoords[i].ycoord > maxy)
-			maxy = newcoords[i].ycoord;
-		if (newcoords[i].zcoord > maxz)
-			maxz = newcoords[i].zcoord;
-		if (newcoords[i].xcoord < minx)
-			minx = newcoords[i].xcoord;
-		if (newcoords[i].ycoord < miny)
-			miny = newcoords[i].ycoord;
-		if (newcoords[i].zcoord < minz)
-			minz = newcoords[i].zcoord;
-	}
-
-	context->iangle = 0.0;
-	context->jangle = 0.0;
-	context->kangle = 0.0;
-	context->imangle = 0.0;
-	context->jmangle = 0.0;
-
-	if (ic[0][0] != 0.0)
-		config->zc = atan(ic[0][1] / ic[0][0]) * (180.0 / PI);
-	else
-		config->zc = 0.0;
-	if (ic[0][0] < 0.0 && ic[0][1] > 0.0)
-		config->zc += 180;
-	else if (ic[0][0] < 0.0 && ic[0][1] < 0.0)
-		config->zc += 180;
-	else if (ic[0][0] > 0.0 && ic[0][1] < 0.0)
-		config->zc += 360;
-
-	ictmp[0] = ic[2][0] * cos(-config->zc * (PI / 180.0))
-			- ic[2][1] * sin(-config->zc * (PI / 180.0));
-
-	if (ic[2][2] != 0.0)
-		config->yc = atan(-ictmp[0] / ic[2][2]) * (180.0 / PI);
-	else
-		config->yc = 0.0;
-	if (ic[2][2] < 0.0 && ictmp[0] > 0.0)
-		config->yc += 180;
-	else if (ic[2][2] < 0.0 && ictmp[0] < 0.0)
-		config->yc += 180;
-	else if (ic[2][2] > 0.0 && ictmp[0] < 0.0)
-		config->yc += 360;
-
-	ictmp[0] = ic[1][0] * cos(-config->zc * (PI / 180.0))
-			- ic[1][1] * sin(-config->zc * (PI / 180.0));
-	ictmp[1] = ic[1][0] * sin(-config->zc * (PI / 180.0))
-			+ ic[1][1] * cos(-config->zc * (PI / 180.0));
-	ictmp[2] = ictmp[0] * sin(-config->yc * (PI / 180.0))
-			+ ic[1][2] * cos(-config->yc * (PI / 180.0));
-
-	if (ictmp[1] != 0.0)
-		config->xc = atan(ictmp[2] / ictmp[1]) * (180.0 / PI);
-	else
-		config->xc = 0.0;
-	if (ictmp[1] < 0.0 && ictmp[2] > 0.0)
-		config->xc += 180;
-	else if (ictmp[1] < 0.0 && ictmp[2] < 0.0)
-		config->xc += 180;
-	else if (ictmp[1] > 0.0 && ictmp[2] < 0.0)
-		config->xc += 360;
-
-	if (config->xc <= 0.0)
-		config->xc += 360.0;
-	if (config->xc >= 360.0)
-		config->xc -= 360.0;
-	if (config->yc <= 0.0)
-		config->yc += 360.0;
-	if (config->yc >= 360.0)
-		config->yc -= 360.0;
-	if (config->zc <= 0.0)
-		config->zc += 360.0;
-	if (config->zc >= 360.0)
-		config->zc -= 360.0;
-
-	if (config->sort == 2) {
-		sortatoms(newcoords, 0, numatoms - 1, FALSE);
-	} else
-		sortatoms(newcoords, 0, numatoms - 1, TRUE);
-
-	for (i = 0; i < numatoms; i++) {
-		newcoords[i].zcoord = coords[newcoords[i].index].zcoord;
-	}
-
-	if (config->xmin == 65535.0) {
-		(context->currentFrame)->xmax = maxx;
-		(context->currentFrame)->xmin = minx;
-	} else {
-		(context->currentFrame)->xmax = config->xmax;
-		(context->currentFrame)->xmin = config->xmin;
-	}
-	if (config->ymin == 65535.0) {
-		(context->currentFrame)->ymax = maxy;
-		(context->currentFrame)->ymin = miny;
-	} else {
-		(context->currentFrame)->ymax = config->ymax;
-		(context->currentFrame)->ymin = config->ymin;
-	}
-	if (config->zmin == 65535.0) {
-		(context->currentFrame)->zmax = maxz;
-		(context->currentFrame)->zmin = minz;
-	} else {
-		(context->currentFrame)->zmax = config->zmax;
-		(context->currentFrame)->zmin = config->zmin;
-	}
-
-	drawcircles(context->cr, context->currentFrame, newcoords, numatoms,
-			context->config);
-
-	g_free(newcoords);
-}
 
 /************************************************************************/
 /* Clears the drawable area and draws the rectangle which represents	*/
 /* border of the simulationbox.						*/
 /************************************************************************/
-void clearDrawable(struct Context *context) {
+void clearFrame(struct Context *context, cairo_t *cr) {
 
-	cairo_rectangle(context->cr, 0.0, 0.0, context->crXSize, context->crYSize);
+	cairo_rectangle(cr, 0.0, 0.0, context->crXSize, context->crYSize);
 	if (context->config->whitebg) {
-		cairo_set_source_rgb(context->cr, 1, 1, 1);
-		cairo_fill(context->cr);
-		cairo_rectangle(context->cr, xborder, yborder,
+		cairo_set_source_rgb(cr, 1, 1, 1);
+		cairo_fill(cr);
+		cairo_rectangle(cr, xborder, yborder,
 				context->config->absxsize, context->config->absysize);
-		cairo_set_source_rgb(context->cr, 0, 0, 0);
-		cairo_stroke(context->cr);
+		cairo_set_source_rgb(cr, 0, 0, 0);
+		cairo_stroke(cr);
 	} else {
-		cairo_set_source_rgb(context->cr, 0, 0, 0);
-		cairo_fill(context->cr);
-		cairo_rectangle(context->cr, xborder, yborder,
+		cairo_set_source_rgb(cr, 0, 0, 0);
+		cairo_fill(cr);
+		cairo_rectangle(cr, xborder, yborder,
 				context->config->absxsize, context->config->absysize);
-		cairo_set_source_rgb(context->cr, 1, 1, 1);
-		cairo_stroke(context->cr);
+		cairo_set_source_rgb(cr, 1, 1, 1);
+		cairo_stroke(cr);
 	}
 
 }
 
 /************************************************************************/
-/* This function resets the orientation of the system by reseting the 	*/
-/* vector that handles the rotation.					*/
 /************************************************************************/
-void resetic() {
-	ic[0][0] = 1.0;
-	ic[0][1] = 0.0;
-	ic[0][2] = 0.0;
-	ic[1][0] = 0.0;
-	ic[1][1] = 1.0;
-	ic[1][2] = 0.0;
-	ic[2][0] = 0.0;
-	ic[2][1] = 0.0;
-	ic[2][2] = 1.0;
+void drawFrame(struct Context *context, cairo_t *cr) {
+	struct Atom *newcoords;
+
+	if (context->config->erase) {
+		clearFrame(context, cr);
+	}
+
+	newcoords = rotateAtoms(context);
+
+	drawAtoms(cr, context->currentFrame, newcoords, context->currentFrame->numAtoms,
+			context->config);
+
+	g_free(newcoords);
 }

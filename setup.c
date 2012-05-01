@@ -193,7 +193,7 @@ struct Configuration * getNewConfigurationFromSetup(struct Context *context) {
 /* the filenames and sets all the variables according to the buttons 	*/
 /* and spinners.														*/
 /************************************************************************/
-void okeypressed(GtkWidget *widget, struct Context *context) {
+void okeyPressed(GtkWidget *widget, struct Context *context) {
 	struct Configuration *newconfig;
 
 	newconfig = getNewConfigurationFromSetup(context);
@@ -1087,7 +1087,7 @@ void showSetupWindow(struct Context *context) {
 	else
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (dtcheck), TRUE);
 
-	g_signal_connect(G_OBJECT (okButton), "clicked", G_CALLBACK (okeypressed),
+	g_signal_connect(G_OBJECT (okButton), "clicked", G_CALLBACK (okeyPressed),
 			(gpointer) context);
 	gtk_box_pack_start(GTK_BOX (hbox3), okButton, TRUE, TRUE, 0);
 	if (!context->StartedAlready)

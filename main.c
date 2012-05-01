@@ -151,12 +151,10 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 
 			first_cr = cairo_create(first);
 
-			context->cr = first_cr;
 			context->crXSize = width;
 			context->crYSize = height;
 
-			clearDrawable(context);
-			rotateAtoms(context);
+			drawFrame(context, first_cr);
 
 			cairo_set_source_surface(cr, first, 0, 0);
 			cairo_paint(cr);
@@ -247,7 +245,7 @@ gint buttonReleaseEvent(GtkWidget *widget, GdkEventButton *event,
 
 	if (event->button == 1) {
 		params->pressed = FALSE;
-		mouserotate(widget, (params->xpress - event->x),
+		mouseRotate(widget, (params->xpress - event->x),
 				(params->ypress - event->y), params);
 	} else if (event->button == 2) {
 	} else if (event->button == 3) {
@@ -283,7 +281,7 @@ gint motionNotifyEvent(GtkWidget *widget, GdkEventMotion *event,
 #if Debug
 			printf("Starting rotating of scene.\n");
 #endif
-			mouserotate(widget, (context->xpress - x), (context->ypress - y),
+			mouseRotate(widget, (context->xpress - x), (context->ypress - y),
 					context);
 			context->xpress = x;
 			context->ypress = y;
@@ -623,7 +621,7 @@ GtkWidget * getMainWindow(struct Context *context) {
 	/* Create reset orientation button */
 	reseto_button = gtk_button_new_with_mnemonic("Reset _Orientation");
 	gtk_box_pack_start(GTK_BOX (vboxright), reseto_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (reseto_button), "clicked", G_CALLBACK (resetob),
+	g_signal_connect(G_OBJECT (reseto_button), "clicked", G_CALLBACK (resetOrientationButtonPressed),
 			(gpointer) context);
 
 	/* Create restartAnimation button. */
