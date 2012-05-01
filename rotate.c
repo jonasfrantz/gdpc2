@@ -1,26 +1,25 @@
 /*
 
- gdpc - a program for visualising molecular dynamic simulations
- Copyright (C) 2000 Jonas Frantz
+ gdpc2 - a program for visualising molecular dynamic simulations
+ Copyright (C) 2012 Jonas Frantz
 
- This file is part of gdpc.
+ This file is a part of gdpc2.
 
- gdpc is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
 
- gdpc is distributed in the hope that it will be useful,
+ This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
 
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-
- Authors email : jonas.frantz@helsinki.fi
+ Authors email: jonas@frantz.fi
 
  */
 
@@ -31,184 +30,31 @@
 
 static double rotationVector[3][3] = { X_VECTOR, Y_VECTOR, Z_VECTOR };
 
-/************************************************************************/
-/* The following procedures take care of the one step angle change.	*/
-/************************************************************************/
-void xplusb(GtkWidget *widget, struct Context *context) {
+/************************************************************************
+ * The following procedure is the callback for angular change button
+ * presses.
+ ************************************************************************/
+void angleAdjustmentButtonPressed(GtkWidget *widget, struct AngleAdjustment *angleAdjustment) {
 	gint getval;
 
-	if (g_mutex_trylock(context->atEnd) == TRUE) {
+	if (g_mutex_trylock(angleAdjustment->context->atEnd) == TRUE) {
 		getval = 1;
-		g_mutex_unlock(context->atEnd);
+		g_mutex_unlock(angleAdjustment->context->atEnd);
 	} else
 		getval = 0;
 
-	context->iangle = 1.0;
-	if (context->pausecheck || getval == 0)
-		triggerImageRedraw(widget, context);
+	angleAdjustment->context->iangle = angleAdjustment->idelta;
+	angleAdjustment->context->jangle = angleAdjustment->jdelta;
+	angleAdjustment->context->kangle = angleAdjustment->kdelta;
+	if (angleAdjustment->context->pausecheck || getval == 0)
+		triggerImageRedraw(widget, angleAdjustment->context);
 }
 
-void yplusb(GtkWidget *widget, struct Context *params) {
-	gint getval;
 
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->jangle = 1.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void zplusb(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->kangle = 1.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void xminusb(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->iangle = -1.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void yminusb(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->jangle = -1.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void zminusb(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->kangle = -1.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-/************************************************************************/
-/* The following procedures take care of the 10 step angle change.	*/
-/************************************************************************/
-void xplus10b(GtkWidget *widget, struct Context *context) {
-	gint getval;
-
-	if (g_mutex_trylock(context->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(context->atEnd);
-	} else
-		getval = 0;
-
-	context->iangle = 10.0;
-	if (context->pausecheck || getval == 0)
-		triggerImageRedraw(widget, context);
-}
-
-void yplus10b(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->jangle = 10.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void zplus10b(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->kangle = 10.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void xminus10b(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->iangle = -10.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void yminus10b(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->jangle = -10.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-void zminus10b(GtkWidget *widget, struct Context *params) {
-	gint getval;
-
-	if (g_mutex_trylock(params->atEnd) == TRUE) {
-		getval = 1;
-		g_mutex_unlock(params->atEnd);
-	} else
-		getval = 0;
-
-	params->kangle = -10.0;
-	if (params->pausecheck || getval == 0)
-		triggerImageRedraw(widget, params);
-}
-
-/************************************************************************/
-/* This procedure is called when the Reset orientation button is 	*/
-/* pressed. It resets the angles and prints them in their entries.	*/
-/************************************************************************/
+/************************************************************************
+ * This procedure is called when the Reset orientation button is pressed.
+ * It resets the angles and prints them in their entries.
+ ************************************************************************/
 void resetOrientationButtonPressed(GtkWidget *widget, struct Context *context) {
 	resetOrientation();
 	triggerImageRedraw(widget, context);

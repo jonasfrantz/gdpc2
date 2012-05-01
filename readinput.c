@@ -1,26 +1,25 @@
 /*
 
- gdpc - a program for visualising molecular dynamic simulations
- Copyright (C) 2000 Jonas Frantz
+ gdpc2 - a program for visualising molecular dynamic simulations
+ Copyright (C) 2012 Jonas Frantz
 
- This file is part of gdpc.
+ This file is a part of gdpc2.
 
- gdpc is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
 
- gdpc is distributed in the hope that it will be useful,
+ This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
 
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-
- Authors email : jonas.frantz@helsinki.fi
+ Authors email: jonas@frantz.fi
 
  */
 
@@ -31,7 +30,6 @@
 
 gint NumFrameRI = 0;
 FILE *NewFP = NULL;
-gint lastframedone = 0;
 
 /************************************************************************/
 /* Reads the input file and processes it, then it calls rotateatoms to	*/
@@ -68,7 +66,6 @@ void * readInput(struct Context *context) {
 		printf("Reading frame : %d\n",NumFrameRI);
 #endif
 
-		lastframedone = 0;
 		numtypes = 0;
 		minx = 0.0;
 		miny = 0.0;
@@ -94,7 +91,6 @@ void * readInput(struct Context *context) {
 				NumFrameRI++;
 				if (NumFrameRI == NUMFRAMES)
 					NumFrameRI = 0;
-				lastframedone = 1;
 				continue;
 			} else
 				g_mutex_unlock(context->atEnd);

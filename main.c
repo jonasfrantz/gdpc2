@@ -1,26 +1,25 @@
 /*
 
- gdpc - a program for visualising molecular dynamic simulations
- Copyright (C) 2000 Jonas Frantz
+ gdpc2 - a program for visualising molecular dynamic simulations
+ Copyright (C) 2012 Jonas Frantz
 
- This file is part of gdpc.
+ This file is a part of gdpc2.
 
- gdpc is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
 
- gdpc is distributed in the hope that it will be useful,
+ This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
 
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-
- Authors email : jonas.frantz@helsinki.fi
+ Authors email: jonas@frantz.fi
 
  */
 
@@ -139,7 +138,7 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 	guint width, height;
 	cairo_t *first_cr;
 	cairo_surface_t *first;
-	char tstr[64];
+	char tstr[256];
 
 	width = gtk_widget_get_allocated_width(widget);
 	height = gtk_widget_get_allocated_height(widget);
@@ -180,6 +179,14 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 			gtk_entry_set_text((GtkEntry *) time_entry, tstr);
 
 			g_mutex_unlock((context->currentFrame)->framedrawn);
+
+			sprintf(tstr, "X angle: %f", context->config->xc);
+			gtk_entry_set_text((GtkEntry *) xc_entry, tstr);
+			sprintf(tstr, "Y angle: %f", context->config->yc);
+			gtk_entry_set_text((GtkEntry *) yc_entry, tstr);
+			sprintf(tstr, "Z angle: %f", context->config->zc);
+			gtk_entry_set_text((GtkEntry *) zc_entry, tstr);
+
 		}
 	}
 
@@ -263,7 +270,7 @@ gint buttonReleaseEvent(GtkWidget *widget, GdkEventButton *event,
 gint motionNotifyEvent(GtkWidget *widget, GdkEventMotion *event,
 		struct Context *context) {
 	gint x, y;
-	char xstr[64];
+	char xstr[256];
 	GdkModifierType state;
 	gint NumFrame;
 
@@ -403,7 +410,6 @@ void triggerImageRedraw(GtkWidget *widget, struct Context *params) {
 /* timeentry and puts the pixmap onto the screen.			*/
 /************************************************************************/
 gboolean switchToNextFrame(struct Context *context) {
-	char tstr[64];
 	char picname[128];
 	char pictype[16];
 	struct timeval tv;
@@ -501,22 +507,6 @@ gboolean switchToNextFrame(struct Context *context) {
 		}
 	}
 
-#if Debug
-	printf("Done with drawing part of timeoutcallback.\n");
-#endif
-
-
-#if Debug
-	printf("Setting angle entryboxes.\n");
-#endif
-
-	sprintf(tstr, "X angle: %f", context->config->xc);
-	gtk_entry_set_text((GtkEntry *) xc_entry, tstr);
-	sprintf(tstr, "Y angle: %f", context->config->yc);
-	gtk_entry_set_text((GtkEntry *) yc_entry, tstr);
-	sprintf(tstr, "Z angle: %f", context->config->zc);
-	gtk_entry_set_text((GtkEntry *) zc_entry, tstr);
-
 	return TRUE;
 }
 
@@ -532,6 +522,8 @@ GtkWidget * getMainWindow(struct Context *context) {
 	GtkWidget *yminus10_button, *zminus10_button, *xlabel, *ylabel, *zlabel;
 	GtkWidget *drawing_area;
 	GtkWidget *window;
+
+	struct AngleAdjustment *angleAdjustment;
 
 	char buf[128];
 
@@ -649,59 +641,131 @@ GtkWidget * getMainWindow(struct Context *context) {
 	g_signal_connect(G_OBJECT (quit_button), "clicked", G_CALLBACK (quit),
 			window);
 
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = -10.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = 0.0;
 	xminus10_button = gtk_button_new_with_label("<<");
 	gtk_box_pack_start(GTK_BOX (hboxx), xminus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (xminus10_button), "clicked",
-			G_CALLBACK (xminus10b), (gpointer) context);
+			G_CALLBACK (angleAdjustmentButtonPressed), (gpointer) angleAdjustment);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = -1.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = 0.0;
 	xminus_button = gtk_button_new_with_label("<");
 	gtk_box_pack_start(GTK_BOX (hboxx), xminus_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (xminus_button), "clicked", G_CALLBACK (xminusb),
-			(gpointer) context);
+	g_signal_connect(G_OBJECT (xminus_button), "clicked", G_CALLBACK (angleAdjustmentButtonPressed),
+			(gpointer) angleAdjustment);
+
 	gtk_box_pack_start(GTK_BOX (hboxx), xlabel, TRUE, TRUE, 0);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 1.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = 0.0;
 	xplus_button = gtk_button_new_with_label(">");
 	gtk_box_pack_start(GTK_BOX (hboxx), xplus_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (xplus_button), "clicked", G_CALLBACK (xplusb),
-			(gpointer) context);
+	g_signal_connect(G_OBJECT (xplus_button), "clicked", G_CALLBACK (angleAdjustmentButtonPressed),
+			(gpointer) angleAdjustment);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 10.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = 0.0;
 	xplus10_button = gtk_button_new_with_label(">>");
 	gtk_box_pack_start(GTK_BOX (hboxx), xplus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (xplus10_button), "clicked",
-			G_CALLBACK (xplus10b), (gpointer) context);
+			G_CALLBACK (angleAdjustmentButtonPressed), (gpointer) angleAdjustment);
 
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = -10.0;
+	angleAdjustment->kdelta = 0.0;
 	yminus10_button = gtk_button_new_with_label("<<");
 	gtk_box_pack_start(GTK_BOX (hboxy), yminus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (yminus10_button), "clicked",
-			G_CALLBACK (yminus10b), (gpointer) context);
+			G_CALLBACK (angleAdjustmentButtonPressed), (gpointer) angleAdjustment);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = -1.0;
+	angleAdjustment->kdelta = 0.0;
 	yminus_button = gtk_button_new_with_label("<");
 	gtk_box_pack_start(GTK_BOX (hboxy), yminus_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (yminus_button), "clicked", G_CALLBACK (yminusb),
-			(gpointer) context);
+	g_signal_connect(G_OBJECT (yminus_button), "clicked", G_CALLBACK (angleAdjustmentButtonPressed),
+			(gpointer) angleAdjustment);
+
 	gtk_box_pack_start(GTK_BOX (hboxy), ylabel, TRUE, TRUE, 0);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = 1.0;
+	angleAdjustment->kdelta = 0.0;
 	yplus_button = gtk_button_new_with_label(">");
 	gtk_box_pack_start(GTK_BOX (hboxy), yplus_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (yplus_button), "clicked", G_CALLBACK (yplusb),
-			(gpointer) context);
+	g_signal_connect(G_OBJECT (yplus_button), "clicked", G_CALLBACK (angleAdjustmentButtonPressed),
+			(gpointer) angleAdjustment);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = 10.0;
+	angleAdjustment->kdelta = 0.0;
 	yplus10_button = gtk_button_new_with_label(">>");
 	gtk_box_pack_start(GTK_BOX (hboxy), yplus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (yplus10_button), "clicked",
-			G_CALLBACK (yplus10b), (gpointer) context);
+			G_CALLBACK (angleAdjustmentButtonPressed), (gpointer) angleAdjustment);
 
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = -10.0;
 	zminus10_button = gtk_button_new_with_label("<<");
 	gtk_box_pack_start(GTK_BOX (hboxz), zminus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (zminus10_button), "clicked",
-			G_CALLBACK (zminus10b), (gpointer) context);
+			G_CALLBACK (angleAdjustmentButtonPressed), (gpointer) angleAdjustment);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = -1.0;
 	zminus_button = gtk_button_new_with_label("<");
 	gtk_box_pack_start(GTK_BOX (hboxz), zminus_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (zminus_button), "clicked", G_CALLBACK (zminusb),
-			(gpointer) context);
+	g_signal_connect(G_OBJECT (zminus_button), "clicked", G_CALLBACK (angleAdjustmentButtonPressed),
+			(gpointer) angleAdjustment);
+
 	gtk_box_pack_start(GTK_BOX (hboxz), zlabel, TRUE, TRUE, 0);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = 1.0;
 	zplus_button = gtk_button_new_with_label(">");
 	gtk_box_pack_start(GTK_BOX (hboxz), zplus_button, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (zplus_button), "clicked", G_CALLBACK (zplusb),
-			(gpointer) context);
+	g_signal_connect(G_OBJECT (zplus_button), "clicked", G_CALLBACK (angleAdjustmentButtonPressed),
+			(gpointer) angleAdjustment);
+
+	angleAdjustment = malloc(sizeof(struct AngleAdjustment));
+	angleAdjustment->context = context;
+	angleAdjustment->idelta = 0.0;
+	angleAdjustment->jdelta = 0.0;
+	angleAdjustment->kdelta = 10.0;
 	zplus10_button = gtk_button_new_with_label(">>");
 	gtk_box_pack_start(GTK_BOX (hboxz), zplus10_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (zplus10_button), "clicked",
-			G_CALLBACK (zplus10b), (gpointer) context);
+			G_CALLBACK (angleAdjustmentButtonPressed), (gpointer) angleAdjustment);
 
 	g_signal_connect(G_OBJECT (window), "destroy", G_CALLBACK (quit), window);
 
@@ -729,8 +793,6 @@ void StartEverything(struct Context *context) {
 	GtkWidget *window;
 	gint i;
 
-	window = getMainWindow(context);
-
 	context->StartedAlready = TRUE;
 
 	/* Open the input file, if it fails exit. */
@@ -746,12 +808,6 @@ void StartEverything(struct Context *context) {
 		fseek(context->fp, 0, 0);
 	}
 
-	/* Allocate colors */
-	setColorset(context->config);
-
-	/* Show all boxes,entries,buttons and pixmaps. */
-	gtk_widget_show_all(window);
-
 	for (i = 0; i < NUMFRAMES; i++) {
 		context->framedata[i].frameready = g_mutex_new();
 		g_mutex_lock(context->framedata[i].frameready);
@@ -761,8 +817,6 @@ void StartEverything(struct Context *context) {
 		g_mutex_unlock(context->framedata[i].framedrawn);
 		context->framedata[i].atomdata = NULL;
 	}
-	context->nextFrameNum = 0;
-	context->currentFrame = NULL;
 
 	context->filewait = g_mutex_new();
 	g_mutex_lock(context->filewait);
@@ -774,6 +828,9 @@ void StartEverything(struct Context *context) {
 		fprintf(stderr, "Creating read thread failed.\n");
 		gtk_main_quit();
 	}
+
+	window = getMainWindow(context);
+	gtk_widget_show_all(window);
 
 	/* Setup timeout. */
 	g_idle_add((GSourceFunc) switchToNextFrame, context);
@@ -808,6 +865,10 @@ struct Configuration * getNewConfiguration() {
 		config->xmax = 0.0;
 		config->ymax = 0.0;
 		config->zmax = 0.0;
+
+		config->xc = 0.0;
+		config->yc = 0.0;
+		config->zc = 0.0;
 
 		config->vary = DEFAULT_VARY;
 		config->scol = DEFAULT_SCOL;
@@ -856,6 +917,7 @@ struct Context * getNewContext() {
 		context->pressed = FALSE;
 		context->StartedAlready = FALSE;
 		context->nextFrameNum = 0;
+		context->currentFrame = NULL;
 		context->config = NULL;
 	}
 	return context;

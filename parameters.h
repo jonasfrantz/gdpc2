@@ -1,26 +1,25 @@
 /*
 
- gdpc - a program for visualising molecular dynamic simulations
- Copyright (C) 2000 Jonas Frantz
+ gdpc2 - a program for visualising molecular dynamic simulations
+ Copyright (C) 2012 Jonas Frantz
 
- This file is part of gdpc.
+ This file is a part of gdpc2.
 
- gdpc is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
 
- gdpc is distributed in the hope that it will be useful,
+ This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
 
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-
- Authors email : jonas.frantz@helsinki.fi
+ Authors email: jonas@frantz.fi
 
  */
 
@@ -155,16 +154,12 @@ struct Configuration {
 	gint sort; /* Method of sorting atoms */
 	gint vary; /* Method of varying drawable objectsize */
 	gint scol; /* Something */
-	gint oldxc; /* Old angular correction, x-wise */
-	gint oldyc; /* Old angular correction, y-wise */
-	gint oldzc; /* Old angular correction, z-wise */
-	gint oldtc; /* Old angular correction, t-wise */
 	gint interval; /* Interval in time between frames */
 	gint numtypes; /* Number of atomtypes */
 	double xcolorset[17][3];
-	double initIangle; /* Angle of view around x */
-	double initJangle; /* Angle of view around y */
-	double initKangle; /* Angle of view around z */
+	double initIangle; /* Initial angle of view around x */
+	double initJangle; /* Initial angle of view around y */
+	double initKangle; /* Initial angle of view around z */
 	double xmin; /* Minumum x coordinate */
 	double xmax; /* Maximum x coordinate */
 	double ymin; /* Minumum y coordinate */
@@ -212,16 +207,19 @@ struct Context {
 	FILE *fp; /* File pointer */
 };
 
+struct AngleAdjustment {
+	struct Context *context;
+	double idelta, jdelta, kdelta;
+};
+
 /* Declaration of extern functions used throughout the program */
 
 void StartEverything(struct Context *context);
+
+void showSetupWindow(struct Context *context);
 void setupStartOk(struct Context *context, struct Configuration *newconfig);
 void setupStartCancel(struct Context *context);
 void setupApplyNewConfig(struct Context *context, struct Configuration *newconfig);
-
-struct Configuration * getNewConfiguration();
-
-void showSetupWindow(struct Context *context);
 
 void drawFrame(struct Context *context, cairo_t *cr);
 void clearFrame(struct Context *context, cairo_t *cr);
@@ -230,20 +228,7 @@ void mouseRotate(GtkWidget *widget, gint xdelta, gint ydelta,
 		struct Context *context);
 struct Atom * rotateAtoms(struct Context *context);
 void resetOrientation();
-
-void xplusb(GtkWidget *widget, struct Context *context);
-void yplusb(GtkWidget *widget, struct Context *context);
-void zplusb(GtkWidget *widget, struct Context *context);
-void xminusb(GtkWidget *widget, struct Context *context);
-void yminusb(GtkWidget *widget, struct Context *context);
-void zminusb(GtkWidget *widget, struct Context *context);
-void xplus10b(GtkWidget *widget, struct Context *context);
-void yplus10b(GtkWidget *widget, struct Context *context);
-void zplus10b(GtkWidget *widget, struct Context *context);
-void xminus10b(GtkWidget *widget, struct Context *context);
-void yminus10b(GtkWidget *widget, struct Context *context);
-void zminus10b(GtkWidget *widget, struct Context *context);
-
+void angleAdjustmentButtonPressed(GtkWidget *widget, struct AngleAdjustment *angleAdjustment);
 void resetOrientationButtonPressed(GtkWidget *widget, struct Context *context);
 
 void sortatoms(struct Atom *coords, gint left, gint right, gboolean sort);
@@ -254,6 +239,6 @@ void setColorset(struct Configuration *config);
 
 void * readInput(struct Context *context);
 
+struct Configuration * getNewConfiguration();
 struct Configuration * copyConfiguration(struct Configuration *oldconfig);
-
 struct Configuration * handleArgs(int args, char **argv);
