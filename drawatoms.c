@@ -58,7 +58,7 @@ void drawAtoms(cairo_t *cr, struct Frame *frame, struct Atom *coords,
 		if (coords[i].zcoord >= frame->zmin
 				&& coords[i].zcoord <= frame->zmax) {
 
-			if (config->usetypes)
+			if (config->useTypesForColoring)
 				c = transformAbsoluteToRelative(coords[i].atype, 0, config->numtypes + 1,
 						NUMCOLORS);
 			else
@@ -125,7 +125,7 @@ void drawAtoms(cairo_t *cr, struct Frame *frame, struct Atom *coords,
 void clearFrame(struct Context *context, cairo_t *cr) {
 
 	cairo_rectangle(cr, 0.0, 0.0, context->crXSize, context->crYSize);
-	if (context->config->whitebg) {
+	if (context->config->backgroundWhite) {
 		cairo_set_source_rgb(cr, 1, 1, 1);
 		cairo_fill(cr);
 		cairo_rectangle(cr, xborder, yborder,
@@ -148,7 +148,7 @@ void clearFrame(struct Context *context, cairo_t *cr) {
 void drawFrame(struct Context *context, cairo_t *cr) {
 	struct Atom *newcoords;
 
-	if (context->config->erase) {
+	if (context->config->erasePreviousFrame) {
 		clearFrame(context, cr);
 	}
 

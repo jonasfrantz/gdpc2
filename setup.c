@@ -147,12 +147,12 @@ struct Configuration * getNewConfigurationFromSetup(struct Context *context) {
 			GTK_SPIN_BUTTON (ssxspinner));
 	newconfig->absysize = gtk_spin_button_get_value_as_int(
 			GTK_SPIN_BUTTON (ssyspinner));
-	tmpvalue = (gint) 1000
+	tmpvalue = 1000.0
 			* gtk_spin_button_get_value(GTK_SPIN_BUTTON (sleepspinner));
 	if (tmpvalue < MININTERVAL)
 		newconfig->interval = MININTERVAL;
 	else
-		newconfig->interval = tmpvalue;
+		newconfig->interval = (gint) tmpvalue;
 
 	if (usescol) {
 		sprintf(newconfig->fstring, "%s",
@@ -173,16 +173,16 @@ struct Configuration * getNewConfigurationFromSetup(struct Context *context) {
 	sprintf(newconfig->timedelim, "%s",
 			gtk_entry_get_text(GTK_ENTRY (timedel_entry)));
 
-	newconfig->fxyz = setupConfig.fxyz;
+	newconfig->inputFormatXYZ = setupConfig.inputFormatXYZ;
 	newconfig->mode = setupConfig.mode;
 	newconfig->vary = setupConfig.vary;
 	newconfig->colorset = setupConfig.colorset;
-	newconfig->erase = setupConfig.erase;
-	newconfig->whitebg = setupConfig.whitebg;
+	newconfig->erasePreviousFrame = setupConfig.erasePreviousFrame;
+	newconfig->backgroundWhite = setupConfig.backgroundWhite;
 	newconfig->dumpnum = setupConfig.dumpnum;
 	newconfig->sort = setupConfig.sort;
 	newconfig->tifjpg = setupConfig.tifjpg;
-	newconfig->usetypes = setupConfig.usetypes;
+	newconfig->useTypesForColoring = setupConfig.useTypesForColoring;
 
 	return newconfig;
 }
@@ -265,7 +265,7 @@ void filechange(GtkWidget *widget, gpointer data) {
 /* pressed.								*/
 /************************************************************************/
 void toggle_checkxyz(GtkWidget *widget, gpointer data) {
-	setupConfig.fxyz = TRUE;
+	setupConfig.inputFormatXYZ = TRUE;
 	gtk_widget_set_sensitive(usetypescheck, TRUE);
 	gtk_widget_set_sensitive(timedel_entry, TRUE);
 	gtk_widget_set_sensitive(timedel_label, TRUE);
@@ -276,7 +276,7 @@ void toggle_checkxyz(GtkWidget *widget, gpointer data) {
 /* is pressed.								*/
 /************************************************************************/
 void toggle_checkaff(GtkWidget *widget, gpointer data) {
-	setupConfig.fxyz = FALSE;
+	setupConfig.inputFormatXYZ = FALSE;
 	gtk_widget_set_sensitive(usetypescheck, FALSE);
 	gtk_widget_set_sensitive(timedel_entry, FALSE);
 	gtk_widget_set_sensitive(timedel_label, FALSE);
@@ -382,11 +382,11 @@ void toggle_checkdn(GtkWidget *widget, gpointer data) {
 /* This function is called when the erase checkbutton is pressed. 	*/
 /************************************************************************/
 void toggle_erase(GtkToggleButton *widget, gpointer data) {
-	setupConfig.erase = gtk_toggle_button_get_active(widget);
+	setupConfig.erasePreviousFrame = gtk_toggle_button_get_active(widget);
 }
 
 void toggle_usetypes(GtkToggleButton *widget, gpointer data) {
-	setupConfig.usetypes = gtk_toggle_button_get_active(widget);
+	setupConfig.useTypesForColoring = gtk_toggle_button_get_active(widget);
 }
 
 /************************************************************************/
@@ -427,7 +427,7 @@ void toggle_checkdumpjpg(GtkWidget *widget, gpointer data) {
 /* This function is called when the whitebg checkbutton is pressed.	*/
 /************************************************************************/
 void toggle_white(GtkToggleButton *widget, gpointer data) {
-	setupConfig.whitebg = gtk_toggle_button_get_active(widget);
+	setupConfig.backgroundWhite = gtk_toggle_button_get_active(widget);
 }
 
 /************************************************************************/
@@ -525,16 +525,16 @@ void showSetupWindow(struct Context *context) {
 	GSList *group;
 
 	setupConfig.mode = context->config->mode;
-	setupConfig.erase = context->config->erase;
-	setupConfig.whitebg = context->config->whitebg;
+	setupConfig.erasePreviousFrame = context->config->erasePreviousFrame;
+	setupConfig.backgroundWhite = context->config->backgroundWhite;
 	setupConfig.colorset = context->config->colorset;
-	setupConfig.fxyz = context->config->fxyz;
+	setupConfig.inputFormatXYZ = context->config->inputFormatXYZ;
 	setupConfig.sort = context->config->sort;
 	setupConfig.vary = context->config->vary;
 	setupConfig.dumpnum = context->config->dumpnum;
 	setupConfig.tifjpg = context->config->tifjpg;
 	setupConfig.dumpnum = context->config->dumpnum;
-	setupConfig.usetypes = context->config->usetypes;
+	setupConfig.useTypesForColoring = context->config->useTypesForColoring;
 
 	usedump = FALSE;
 	usescol = FALSE;
@@ -803,7 +803,7 @@ void showSetupWindow(struct Context *context) {
 	gtk_box_pack_start(GTK_BOX (hboxtd), timedel_label, FALSE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX (hboxtd), timedel_entry, FALSE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX (vboxleft), hboxtd, FALSE, TRUE, 0);
-	if (!context->config->fxyz) {
+	if (!context->config->inputFormatXYZ) {
 		gtk_widget_set_sensitive(timedel_entry, FALSE);
 		gtk_widget_set_sensitive(timedel_label, FALSE);
 	} else {
@@ -822,7 +822,7 @@ void showSetupWindow(struct Context *context) {
 	g_signal_connect(G_OBJECT (check), "clicked", G_CALLBACK (toggle_checkxyz),
 			G_OBJECT (setupwin));
 	group = gtk_radio_button_get_group(GTK_RADIO_BUTTON (check));
-	if (context->config->fxyz) {
+	if (context->config->inputFormatXYZ) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	}
 
@@ -830,14 +830,14 @@ void showSetupWindow(struct Context *context) {
 	gtk_box_pack_start(GTK_BOX (vboxright), check, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (check), "clicked", G_CALLBACK (toggle_checkaff),
 			G_OBJECT (setupwin));
-	if (!context->config->fxyz) {
+	if (!context->config->inputFormatXYZ) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (check), TRUE);
 	}
 
 	g_signal_connect(G_OBJECT (usetypescheck), "toggled",
 			G_CALLBACK (toggle_usetypes), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxright), usetypescheck, TRUE, TRUE, 0);
-	if (context->config->usetypes)
+	if (context->config->useTypesForColoring)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (usetypescheck), TRUE);
 	else
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (usetypescheck), FALSE);
@@ -992,7 +992,7 @@ void showSetupWindow(struct Context *context) {
 	g_signal_connect(G_OBJECT (erasetoggle), "toggled",
 			G_CALLBACK (toggle_erase), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxmostright), erasetoggle, TRUE, TRUE, 0);
-	if (context->config->erase)
+	if (context->config->erasePreviousFrame)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (erasetoggle), TRUE);
 
 	whitetoggle = gtk_check_button_new_with_label(
@@ -1000,7 +1000,7 @@ void showSetupWindow(struct Context *context) {
 	g_signal_connect(G_OBJECT (whitetoggle), "toggled",
 			G_CALLBACK (toggle_white), G_OBJECT (setupwin));
 	gtk_box_pack_start(GTK_BOX (vboxmostright), whitetoggle, TRUE, TRUE, 0);
-	if (context->config->whitebg)
+	if (context->config->backgroundWhite)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (whitetoggle), TRUE);
 
 	sortrtoggle = gtk_check_button_new_with_label(" Reverse sorting");
@@ -1012,7 +1012,7 @@ void showSetupWindow(struct Context *context) {
 
 	sleep_label = gtk_label_new("Delay between frames [s] : ");
 
-	adjsleep = (GtkAdjustment *) gtk_adjustment_new((context->config->interval / 1000),
+	adjsleep = (GtkAdjustment *) gtk_adjustment_new((context->config->interval / 1000.0),
 			0.0, 100.0, 0.1, 5.0, 0.0);
 
 	sleepspinner = gtk_spin_button_new(adjsleep, 0, 1);

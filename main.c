@@ -41,15 +41,9 @@ GtkWidget *coord_entry;
 GtkWidget *maxx_entry, *maxy_entry, *maxz_entry;
 GtkWidget *xc_entry, *yc_entry, *zc_entry;
 
-gboolean MB_pressed;
+extern gint NumFrameRI; /* Contains which frame is about to be read from the input data */
 
-gint retcode; /* Return value from create_thread command */
-GThread *th_a; /* Thread structure */
-
-extern gint NumFrameRI; /* Contains which frame is about to be
- read from the input data */
-extern FILE *NewFP; /* Filepointer to new file if one has
- been chosen, otherwise = NULL */
+extern FILE *NewFP; /* Filepointer to new file if one has been chosen, otherwise = NULL */
 
 /************************************************************************/
 /* This function is called when the quit button is pressed.		*/
@@ -197,14 +191,14 @@ gboolean updateImageArea(GtkWidget *widget, cairo_t *cr,
 /* This procedure is called when keyboard key is pressed.		*/
 /* Escape key quits gdpc, space is used with the bsleep option.		*/
 /************************************************************************/
-gboolean keyPressEvent(GtkWidget *widget, GdkEventKey *event, gpointer data) {
+gboolean keyPressEvent(GtkWidget *widget, GdkEventKey *event, struct Context *context) {
 	switch (event->keyval) {
 	case GDK_KEY_Escape:
 		gtk_main_quit();
 		break;
 
 	case GDK_KEY_space:
-		MB_pressed = TRUE;
+		context->pausedGotoNextFrame = TRUE;
 		return FALSE;
 		break;
 
@@ -222,17 +216,17 @@ gboolean keyPressEvent(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 /* position of the cursor.						*/
 /************************************************************************/
 gint buttonPressEvent(GtkWidget *widget, GdkEventButton *event,
-		struct Context *params) {
+		struct Context *context) {
 #if Debug
 	printf("Button pressed.\n");
 #endif
 
 	if (event->button == 1) {
-		params->pressed = TRUE;
-		params->xpress = event->x;
-		params->ypress = event->y;
+		context->pressed = TRUE;
+		context->xpress = event->x;
+		context->ypress = event->y;
 	} else if (event->button == 2) {
-		MB_pressed = TRUE;
+		context->pausedGotoNextFrame = TRUE;
 	} else if (event->button == 3) {
 		gtk_main_quit();
 	}
@@ -428,10 +422,10 @@ gboolean switchToNextFrame(struct Context *context) {
 		previous_sec = tv.tv_sec;
 
 		if (!context->pausecheck && !context->setupstop
-				&& (!context->config->mbsleep || MB_pressed)) {
-			MB_pressed = FALSE;
+				&& (!context->config->waitForNextFramePress || context->pausedGotoNextFrame)) {
+			context->pausedGotoNextFrame = FALSE;
 
-			if (context->config->once) {
+			if (context->config->oneLoop) {
 				if (context->currentFrame != NULL) {
 					if ((context->currentFrame)->lastFrame) {
 						gtk_main_quit();
@@ -536,7 +530,7 @@ GtkWidget * getMainWindow(struct Context *context) {
 	gtk_container_set_border_width(GTK_CONTAINER (window), 5);
 
 	g_signal_connect_swapped(G_OBJECT (window), "key_press_event",
-			G_CALLBACK (keyPressEvent), NULL);
+			G_CALLBACK (keyPressEvent), context);
 
 	/* Create boxes for outlay. */
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -792,6 +786,7 @@ GtkWidget * getMainWindow(struct Context *context) {
 void StartEverything(struct Context *context) {
 	GtkWidget *window;
 	gint i;
+	GThread *th_a; /* Thread structure */
 
 	context->StartedAlready = TRUE;
 
@@ -870,6 +865,8 @@ struct Configuration * getNewConfiguration() {
 		config->yc = 0.0;
 		config->zc = 0.0;
 
+		config->file[0] = '\0';
+
 		config->vary = DEFAULT_VARY;
 		config->scol = DEFAULT_SCOL;
 		config->sort = DEFAULT_SORT;
@@ -877,12 +874,12 @@ struct Configuration * getNewConfiguration() {
 		config->mode = DEFAULT_MODE;
 		config->colorset = DEFAULT_COLORSET;
 		config->dumpnum = DEFAULT_DUMPNUM;
-		config->whitebg = DEFAULT_WHITEBG;
-		config->erase = DEFAULT_ERASE;
-		config->fxyz = DEFAULT_FXYZ;
-		config->mbsleep = FALSE;
-		config->once = FALSE;
-		config->usetypes = FALSE;
+		config->backgroundWhite = DEFAULT_WHITEBG;
+		config->erasePreviousFrame = DEFAULT_ERASE;
+		config->inputFormatXYZ = DEFAULT_FXYZ;
+		config->waitForNextFramePress = FALSE;
+		config->oneLoop = FALSE;
+		config->useTypesForColoring = FALSE;
 
 		config->xcolumn = DEFAULT_XCOLUMN;
 		config->ycolumn = DEFAULT_YCOLUMN;

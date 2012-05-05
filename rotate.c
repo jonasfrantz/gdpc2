@@ -77,7 +77,7 @@ void mouseRotate(GtkWidget *widget, gint xdelta, gint ydelta,
 
 	context->imangle = (xdelta * 90.0) / (double) context->config->absxsize;
 	context->jmangle = (ydelta * 90.0) / (double) context->config->absysize;
-	if (context->pausecheck || context->config->mbsleep || getval == 0)
+	if (context->pausecheck || context->config->waitForNextFramePress || getval == 0)
 		triggerImageRedraw(widget, context);
 }
 

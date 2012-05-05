@@ -32,6 +32,14 @@ gint NumFrameRI = 0;
 FILE *NewFP = NULL;
 
 /************************************************************************/
+/************************************************************************/
+void initFrame(struct Frame *frame) {
+	frame->lastFrame = FALSE;
+	frame->atomdata = NULL;
+}
+
+
+/************************************************************************/
 /* Reads the input file and processes it, then it calls rotateatoms to	*/
 /* rotate the coordinates and draw them.								*/
 /************************************************************************/
@@ -82,9 +90,10 @@ void * readInput(struct Context *context) {
 		}
 		fpRI = context->fp;
 
-		/* If file is in xyz format start reading here ! */
+		initFrame(&(context->framedata[NumFrameRI]));
 
-		if (context->config->fxyz) {
+		/* If file is in xyz format start reading here ! */
+		if (context->config->inputFormatXYZ) {
 			if (fgets(buf, 160, fpRI) == NULL) {
 				context->framedata[previousFrameNum].lastFrame = TRUE;
 //				printf("RI: At end %5.3f\n", params->framedata[previousFrameNum].atime);
@@ -92,9 +101,9 @@ void * readInput(struct Context *context) {
 				if (NumFrameRI == NUMFRAMES)
 					NumFrameRI = 0;
 				continue;
-			} else
+			} else {
 				g_mutex_unlock(context->atEnd);
-				context->framedata[NumFrameRI].lastFrame = FALSE;
+			}
 
 			n = sscanf(buf, "%d", &nreadxyz);
 			if (n != 1) {

@@ -154,7 +154,7 @@ struct Configuration {
 	gint sort; /* Method of sorting atoms */
 	gint vary; /* Method of varying drawable objectsize */
 	gint scol; /* Something */
-	gint interval; /* Interval in time between frames */
+	gint interval; /* Interval in milliseconds between frames */
 	gint numtypes; /* Number of atomtypes */
 	double xcolorset[17][3];
 	double initIangle; /* Initial angle of view around x */
@@ -169,14 +169,14 @@ struct Configuration {
 	double xc; /* Angular correction, x-wise */
 	double yc; /* Angular correction, y-wise */
 	double zc; /* Angular correction, z-wise */
-	gboolean mbsleep; /* Do we want to wait after every frame for a middle button press ? */
-	gboolean whitebg; /* Do we want a white background ? */
-	gboolean erase; /* Do we want to erase the old frame before drawing a new one ? */
-	gboolean fxyz; /* Is input in xyz-format ? */
+	gboolean waitForNextFramePress; /* Do we want to wait after every frame for a middle button press ? */
+	gboolean backgroundWhite; /* Do we want a white background ? */
+	gboolean erasePreviousFrame; /* Do we want to erase the old frame before drawing a new one ? */
+	gboolean inputFormatXYZ; /* Is input in xyz-format ? */
 	gboolean dumpnum; /* Do we want number-of-frame or timestamp on dumped images ? */
 	gboolean tifjpg; /* Do we want tifs or jpgs to be dumped ? */
-	gboolean usetypes; /* Will the be coloring according to atomtypes ? */
-	gboolean once;
+	gboolean useTypesForColoring; /* Will the be coloring according to atomtypes ? */
+	gboolean oneLoop; /* Loop through animation once, then quit automatically */
 	gchar fstring[30]; /* String to check for in inputlines */
 	gchar file[256]; /* Name of input file */
 	gchar dumpname[50]; /* Names of dumped images */
@@ -188,6 +188,7 @@ struct Context {
 	gint crXSize, crYSize;
 	GtkWidget *drawing_area;
 	struct Configuration *config;
+	gboolean pausedGotoNextFrame;
 	gboolean pausecheck; /* Is animation on pause ? */
 	gboolean setupstop; /* Is the animation being configured ? */
 	gboolean pressed; /* Is mousebutton pressed down on pixmap ? */

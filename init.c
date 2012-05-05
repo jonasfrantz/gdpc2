@@ -269,11 +269,11 @@ struct Configuration * handleArgs(int args, char **argv) {
 			argl += 2;
 		} else if (!strcmp(c, "erase") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			config->erase = TRUE;
+			config->erasePreviousFrame = TRUE;
 			argl++;
 		} else if (!strcmp(c, "w") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			config->whitebg = TRUE;
+			config->backgroundWhite = TRUE;
 			argl++;
 		} else if (!strcmp(c, "colorinv") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
@@ -301,7 +301,7 @@ struct Configuration * handleArgs(int args, char **argv) {
 			argl++;
 		} else if (!strcmp(c, "xyz") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			config->fxyz = TRUE;
+			config->inputFormatXYZ = TRUE;
 			argl++;
 		} else if (!strcmp(c, "dumpnum") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
@@ -406,11 +406,11 @@ struct Configuration * handleArgs(int args, char **argv) {
 			argl += 2;
 		} else if (!strcmp(c, "usetypes") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			config->usetypes = TRUE;
+			config->useTypesForColoring = TRUE;
 			argl++;
 		} else if (!strcmp(c, "bsleep") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			config->mbsleep = TRUE;
+			config->waitForNextFramePress = TRUE;
 			argl++;
 		} else if (!strcmp(c, "help") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
@@ -418,7 +418,7 @@ struct Configuration * handleArgs(int args, char **argv) {
 			return NULL;
 		} else if (!strcmp(c, "once") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
-			config->once = TRUE;
+			config->oneLoop = TRUE;
 			argl++;
 		} else if (!strcmp(c, "rotate") && !setxcol && !setycol && !setzcol
 				&& !settcol) {
@@ -462,8 +462,8 @@ struct Configuration * handleArgs(int args, char **argv) {
 		}
 	}
 
-	if (!config->fxyz)
-		config->usetypes = FALSE;
+	if (!config->inputFormatXYZ)
+		config->useTypesForColoring = FALSE;
 	if (setxcol && setycol && setzcol && settcol && setfile)
 		return config;
 	else {
